@@ -625,7 +625,7 @@ This is the likeliest trap in the whole library, and it is worth stating twice.
 | `(fold-left f v l)` | `(elem acc)` | SRFI-1 `fold` |
 | `(fold-right f v l)` | `(elem acc)` | SRFI-1 `fold-right` |
 | `(reduce f l)` | `(acc elem)` | Clojure's two-argument `reduce` |
-| `(reduce-left f l)` | `(elem acc)` | SRFI-1 `reduce` |
+| `(reduce-left f l)` | `(acc elem)` | MIT/GNU Scheme `reduce-left` |
 | `(reduce-right f l)` | `(elem acc)` | SRFI-1 `reduce-right` |
 
 `fold` takes "the accumulated value and ... the current element", in that order (`src/lib/prelude.scm`).
@@ -646,19 +646,32 @@ Runtime error [3:1-3:29]: (error) expected a list as the second argument, receiv
 `fold` is the one that fails, because it hands `cons` the accumulator first.
 Whichever spelling a reader arrives with, one of these three is not what they expect.
 
-The `reduce` family seeds each of those folds with an element of the list instead of a value, and inherits its combiner order: `reduce` is `fold` started from the first element, `reduce-left` is `fold-left` started from the first, and `reduce-right` is `fold-right` started from the last (`src/lib/prelude.scm`).
-So the crossing above reaches them too -- `(reduce - (list 1 2 3))` is `-4` but `(reduce-left - (list 1 2 3))` is `2`.
-The rule that keeps all six straight: **an unsuffixed name takes the accumulator first, and a `-left` or `-right` suffix takes the element first.**
+The `reduce` family seeds a fold with an element of the list instead of a value, and inherits that fold's combiner order: `reduce` and `reduce-left` are both `fold` started from the first element, and `reduce-right` is `fold-right` started from the last (`src/lib/prelude.scm`).
+So `reduce` and `reduce-left` agree -- `(reduce - (list 1 2 3))` and `(reduce-left - (list 1 2 3))` are both `-4`.
+The rule that keeps all six straight: **`fold`, `reduce`, and `reduce-left` take the accumulator first; `fold-left`, `fold-right`, and `reduce-right` take the element first.**
 
-Two things are worth knowing before reading that as a peculiarity of Scamper's.
+The split is not a rule about the suffix, though until now it looked like one.
+`reduce-left` shipped in 4.7.0 as `fold-left` seeded with the first element, which made it element-first and completed a tidy "a `-left` or `-right` suffix takes the element first" grid.
+The grid cost it both of the things its name promises: it nested rightward, and it disagreed with `reduce` on the same arguments.
+It was reversed in #712, before any reading could teach it.
+
+The name is MIT/GNU Scheme's, which documents `(reduce-left list '() '(1 2 3 4))` as `(((1 2) 3) 4)` -- accumulator-first and left-associative -- and SRFI-1 defines no `reduce-left` at all.
+MIT has since marked its own `reduce-left` obsolete in favour of its SRFI-1 `reduce`, which is element-first, so current MIT is not a precedent for the two agreeing; the order it gives `reduce-left` is unchanged either way.
+`reduce-left` exists (#664) to pin a direction in a name that `reduce` is free to change out from under, which only works if `reduce-left` starts out as what `reduce` does today.
+
+`fold-left` kept its order through all of this: like `fold` and `fold-right` it is pinned, taught, and in student code.
+`reduce-left`, five days old, was the only name here that could still move.
+
+Two things are worth knowing before reading the split as a peculiarity of Scamper's.
 
 **R6RS is inconsistent in exactly the same way**: its `fold-left` hands `combine` the accumulator first and its `fold-right` hands it last.
 SRFI-1 and Racket are the uniform ones -- every fold in both passes the element first and the seed last.
 So a library splitting its own folds between the two orders is not unusual; what is Scamper's own is *which* names fall on which side.
 
-**`reduce` also differs from SRFI-1 in arity, not only in order.**
-SRFI-1's is `(reduce f ridentity list)`, and `ridentity` is not a seed -- it is used only when the list is empty, so `(reduce f z l)` is `(fold f (car l) (cdr l))` for any non-empty `l`.
-Scamper's `reduce` takes no such value and reports an error on an empty list, which is Clojure's two-argument shape rather than SRFI-1's three-argument one.
+**The `reduce` family also differs in arity, not only in order.**
+SRFI-1's is `(reduce f ridentity list)`, and `ridentity` is not a seed -- it is used only when the list is empty, so `(reduce f z l)` is SRFI-1's `(fold f (car l) (cdr l))` for any non-empty `l`.
+MIT's `reduce-left` takes the same third argument, for the same reason.
+Scamper's `reduce` and `reduce-left` take no such value and report an error on an empty list, which is Clojure's two-argument shape rather than SRFI-1's or MIT's three-argument one.
 
 ### Argument order: where the function goes
 

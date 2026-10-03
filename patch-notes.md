@@ -27,8 +27,15 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- random now reports an error if the count is not positive, since there is nothing to choose from.
+- An error about a map key that is not a string no longer begins with a strange internal name.
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
 - id is now available, the identity function, which returns whatever value you give it, for when you need a function that leaves its input alone.
+- reduce-left now passes the combining function the accumulated value first and the current element second, matching reduce, so reduce-left of - over 1, 2 and 3 is -4 rather than 2.
+- repeat now reports an error when given a negative count, instead of reporting a confusing Javascript error.
+- list-ref now reports an error when given a negative index, instead of quietly answering the first element.
+- Ctrl-I now re-indents your file on Windows and Linux, where it had been selecting code instead.
+- A struct constructor that takes one field now says "expects 1 argument" instead of "expects 1 arguments".
 
 # 4.7.0
 

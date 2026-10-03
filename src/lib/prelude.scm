@@ -73,15 +73,22 @@
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, positive-integer?, real?, zero?
 (define-export integer? (js-var "prelude_integerQ"))
 
 ;;; (nonnegative-integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer that is zero or greater, i.e., a
 ;;; possible size or length.
-;;; @category math, typecheck, predicates, integer?, negative?, positive?, zero?, make-list, make-string, make-vector
+;;; @category math, typecheck, predicates, integer?, negative?, positive?, positive-integer?, zero?, make-list, make-string, make-vector
 (define-export nonnegative-integer? (js-var "prelude_nonnegativeIntegerQ"))
+
+;;; (positive-integer? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an integer that is greater than zero, i.e.,
+;;; a possible count of things to choose from.
+;;; @category math, typecheck, predicates, integer?, negative?, nonnegative-integer?, positive?, zero?, random
+(define-export positive-integer? (js-var "prelude_positiveIntegerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
@@ -144,13 +151,13 @@
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, positive-integer?, real?, zero?
 (define-export positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, positive-integer?, real?, zero?
 (define-export negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
@@ -1075,14 +1082,19 @@
   (lambda (f v l)
     (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
 
+; N.B., reduce-left repeats reduce's body rather than calling it, deliberately
+; (#664, #712): the point of the name is to pin the leftward direction while
+; `reduce` stays free to change its implementation. Delegating would also
+; re-label the empty-list error as `(reduce)`, which both test suites pin.
+
 ;;; (reduce-left f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
-;;; Like `fold-left` but uses the first element of `l` as the initial value. Unlike `reduce`, the combining function `f` takes the current element as its first argument and the accumulated value as its second, as `fold-left` does.
+;;; Like `reduce`, with the leftward direction of the fold fixed in the name: the combining function `f` takes the accumulated value as its first argument and the current element as its second.
 ;;; @category list, list manipulation, reduce, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce-left
   (lambda (f l)
-    (fold-left f (car l) (cdr l))))
+    (fold f (car l) (cdr l))))
 
 ; N.B., fold-right's and reduce-right's tail-recursive worker: `rev` is the
 ; list reversed, so walking it forwards combines from the right end inwards --
@@ -1268,10 +1280,9 @@
 (define-export range (js-var "prelude_range"))
 
 ;;; (random n) -> number?
-;;;  n : integer?
-;;;   n >= 0
+;;;  n : positive-integer?
 ;;; Returns a random number in the range 0 to n (exclusive).
-;;; @category other
+;;; @category other, positive-integer?
 (define-export random (js-var "prelude_random"))
 
 ;;; (ignore v) -> void?
