@@ -859,9 +859,12 @@ describe('Construct semantics (comprehensiveness audit)', () => {
       expect(await runProgram('{"a" 1 "a" 2}')).toEqual(['{ "a" : 2 }'])
     })
 
+    // No procedure is blamed: a map literal is a form rather than a call the
+    // student wrote, and the `##mkObj##` it expands to is a name they cannot
+    // type (#683).
     test('a non-string key is a runtime error', async () => {
       expect(await runProgram('{1 2}')).toEqual([
-        'Runtime error [1:1-1:5]: (##mkObj##) A map key must be a string, received number',
+        'Runtime error [1:1-1:5]: A map key must be a string, received number',
       ])
     })
 
