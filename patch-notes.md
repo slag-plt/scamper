@@ -28,7 +28,12 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - random now reports an error if the count is not positive, since there is nothing to choose from.
+- An error about a map key that is not a string no longer begins with a strange internal name.
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- repeat now reports an error when given a negative count, instead of reporting a confusing Javascript error.
+- list-ref now reports an error when given a negative index, instead of quietly answering the first element.
+- Ctrl-I now re-indents your file on Windows and Linux, where it had been selecting code instead.
+- A struct constructor that takes one field now says "expects 1 argument" instead of "expects 1 arguments".
 
 # 4.7.0
 
