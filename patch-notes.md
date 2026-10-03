@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- An error about a map key that is not a string no longer begins with a strange internal name.
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
 
 # 4.7.0
