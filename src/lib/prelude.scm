@@ -73,15 +73,22 @@
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, positive-integer?, real?, zero?
 (define-export integer? (js-var "prelude_integerQ"))
 
 ;;; (nonnegative-integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer that is zero or greater, i.e., a
 ;;; possible size or length.
-;;; @category math, typecheck, predicates, integer?, negative?, positive?, zero?, make-list, make-string, make-vector
+;;; @category math, typecheck, predicates, integer?, negative?, positive?, positive-integer?, zero?, make-list, make-string, make-vector
 (define-export nonnegative-integer? (js-var "prelude_nonnegativeIntegerQ"))
+
+;;; (positive-integer? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an integer that is greater than zero, i.e.,
+;;; a possible count of things to choose from.
+;;; @category math, typecheck, predicates, integer?, negative?, nonnegative-integer?, positive?, zero?, random
+(define-export positive-integer? (js-var "prelude_positiveIntegerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
@@ -144,13 +151,13 @@
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, positive-integer?, real?, zero?
 (define-export positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, positive-integer?, real?, zero?
 (define-export negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
@@ -1265,10 +1272,9 @@
 (define-export range (js-var "prelude_range"))
 
 ;;; (random n) -> number?
-;;;  n : integer?
-;;;   n >= 0
+;;;  n : positive-integer?
 ;;; Returns a random number in the range 0 to n (exclusive).
-;;; @category other
+;;; @category other, positive-integer?
 (define-export random (js-var "prelude_random"))
 
 ;;; (ignore v) -> void?

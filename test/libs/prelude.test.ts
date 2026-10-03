@@ -3219,7 +3219,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error: (random) expected an integer as the first argument, received string',
+    'Runtime error: (random) expected a positive-integer as the first argument, received string',
   ])
 })
 

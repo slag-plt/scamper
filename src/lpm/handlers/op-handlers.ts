@@ -81,6 +81,22 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
 }
 
 /**
+ * The name to blame in an error, or nothing when the only candidate is an
+ * internal `##...##` spelling -- one the reader denies a student outright
+ * (#532), so naming it describes their mistake with a word they cannot type.
+ *
+ * The test is load-bearing rather than defensive, with a reason of its own at
+ * each of the two call sites below: codegen stamps every lambda with the
+ * placeholder `##anonymous##`, which a define then replaces with the Scamper
+ * spelling, and Module.registerValue renames each native to its Scamper
+ * binding -- so runtime.scm's internal primitives are `##...##`-named at
+ * runtime (#683). A lambda the student never named has no name at all, which
+ * is why `undefined` is a case here too.
+ */
+const reportable = (name: string | undefined): string | undefined =>
+  name !== undefined && !name.startsWith('##') ? name : undefined
+
+/**
  * Shared by ApHandler (a statically-known arg count baked into the "ap" op
  * at compile time) and ApSpreadHandler (ap-spread's arg count is only known at
  * runtime, from the length of the spread list) -- both ultimately need the
@@ -163,12 +179,17 @@ export function applyFn(
         // native -- which is why a bare native with no wrapper to speak for it
         // names itself instead (#633), leaving the rule to the wrapped natives
         // it was written for.
+        //
+        // When neither candidate is a name a student could have written -- a
+        // map literal's `##mkObj##`, say -- no one is named at all: they wrote
+        // a form rather than a call, so there is no procedure to blame (#683).
         e.range ??= siteRange
         e.modName ??= siteModName
-        e.source ??=
-          currFrame.origin === 'builtin' && !currFrame.name.startsWith('##')
-            ? currFrame.name
-            : fn.name
+        // The wrapper's own Scamper spelling, when a builtin frame has one to
+        // offer; the native speaks for itself otherwise.
+        const wrapper =
+          currFrame.origin === 'builtin' ? reportable(currFrame.name) : undefined
+        e.source ??= wrapper ?? reportable(fn.name)
         throw e
       } else {
         throw new ScamperError(
@@ -204,12 +225,7 @@ export function applyFn(
         // passed to it. The js-function rule above reads currFrame.name
         // precisely because there the frame *is* the contract wrapper speaking
         // for the native it wrapped; different site, different right answer.
-        //
-        // The `##` guard is load-bearing rather than defensive: codegen stamps
-        // every lambda with the placeholder `##anonymous##`, which a define then
-        // replaces with the Scamper spelling, so `fn.name` is almost never
-        // undefined and an unguarded read would show a student that sentinel.
-        fn.name !== undefined && !fn.name.startsWith('##') ? fn.name : undefined)
+        reportable(fn.name))
     }
     const namedArgs = args.slice(0, fn.params.length)
     const bindings = fn.params.map((p: string, i: number): [string, Value] =>
