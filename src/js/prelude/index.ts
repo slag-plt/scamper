@@ -111,6 +111,16 @@ export function prelude_nonnegativeIntegerQ(x: L.Value): x is number {
   return L.isNumber(x) && Number.isInteger(x) && x >= 0
 }
 
+// A count to choose *from* is a positive integer, which is not the same notion
+// as a size (#679). A size may be zero -- the empty list is the right answer to
+// a request for nothing -- but there is no number to draw from zero candidates,
+// so `random` needs its own predicate rather than #675's. Exported to students
+// in its own right, like its neighbour above. Typed as a predicate so the guard
+// below narrows with it.
+export function prelude_positiveIntegerQ(x: L.Value): x is number {
+  return L.isNumber(x) && Number.isInteger(x) && x > 0
+}
+
 // N.B., we don't implement the following functions:
 //   (complex? obj)
 //   (rational? obj)
@@ -690,6 +700,15 @@ export function prelude_listTake(l: L.Value, k: L.Value): L.List {
 }
 
 export function prelude_listRef(l: L.List, n: number): L.Value {
+  // Guarded before the walk because the walk cannot see it: `i > 0` is false
+  // from the first step when `n` is negative, so it stopped on the head and
+  // `(list-ref (list 1 2 3) -1)` answered 1 (#678).
+  if (n < 0) {
+    throw new L.ScamperError(
+      'Runtime',
+      `list-ref: index ${n} out of bounds of list`,
+    )
+  }
   let i = n
   while (l !== null && i > 0) {
     l = l.tail
@@ -1362,7 +1381,14 @@ export function prelude_range(...args: number[]): L.List {
   }
 }
 
-export function prelude_random(n: number): number {
+export function prelude_random(n: L.Value): number {
+  // The contract is `positive-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #679). Unchecked, `Math.random()` scaled by a negative
+  // `n` answered a negative "random number", and by zero answered `0`, a value
+  // the empty range does not contain.
+  if (!prelude_positiveIntegerQ(n)) {
+    throw new L.ScamperError('Runtime', 'random: expected a positive integer')
+  }
   return Math.floor(Math.random() * n)
 }
 

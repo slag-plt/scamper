@@ -143,7 +143,7 @@ export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {
 export function runtime_mkCtorFn (t: string, fieldNames: string[]): (...args: L.Value[]) => L.Struct {
   return L.nameFn(t, (...args: L.Value[]) => {
     if (args.length !== fieldNames.length) {
-      throw new L.ScamperError('Runtime', `Constructor ${t} expects ${fieldNames.length} arguments, received ${args.length}`, undefined, undefined, t)
+      throw new L.ScamperError('Runtime', `Constructor ${t} expects ${fieldNames.length} ${L.argumentNoun(fieldNames.length)}, received ${args.length}`, undefined, undefined, t)
     }
     return L.mkStruct(t, fieldNames, args)
   })

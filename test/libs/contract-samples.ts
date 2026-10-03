@@ -37,6 +37,7 @@ export const SAMPLES: Record<string, string> = {
   'number?': '1',
   'integer?': '1',
   'nonnegative-integer?': '1',
+  'positive-integer?': '1',
   'string?': '"abc"',
   'char?': '#\\a',
   'boolean?': '#t',

@@ -1270,6 +1270,100 @@ test('l-s-r-s section only a two-argument procedure', async () => {
   }
 })
 
+// https://github.com/slag-plt/scamper/issues/709
+//
+// The identity function, requested for coursework. It is the unit of
+// `compose`, so `(compose f id)` is `f`, and it is what a higher-order
+// procedure wants when an element should pass through unchanged.
+test('id', async () => {
+  expect(
+    await runProgram(`
+(id 5)
+(id "hello")
+(id #t)
+(id null)
+(id (list 1 2 3))
+(id (pair 1 2))
+(map id (list 1 2 3))
+((compose id) 7)
+((compose id id) 7)
+((compose id (lambda (x) (+ x 1))) 1)
+((compose (lambda (x) (+ x 1)) id) 1)
+((o id (lambda (x) (+ x 1))) 1)
+(|> 5 id id)
+(let ([v (list 1 2)]) (eq? v (id v)))
+(let ([r (ref 1)]) (eq? r (id r)))
+`),
+  ).toEqual([
+    '5',
+    '"hello"',
+    '#t',
+    'null',
+    '(list 1 2 3)',
+    '(pair 1 2)',
+    '(list 1 2 3)',
+    // the unit of composition, on either side: composing with id changes nothing
+    '7',
+    '7',
+    '2',
+    '2',
+    '2',
+    '5',
+    // and it returns the argument itself, not something equal to it
+    '#t',
+    '#t',
+  ])
+})
+
+// `id` takes exactly one argument, and its docstring says `any`, so the only
+// thing its contract can report is the arity.
+test('id takes exactly one argument', async () => {
+  expect(await runProgram('(id)')).toEqual([
+    'Runtime error: (id) Arity mismatch in function call: expected 1 argument, got 0',
+  ])
+  expect(await runProgram('(id 1 2)')).toEqual([
+    'Runtime error: (id) Arity mismatch in function call: expected 1 argument, got 2',
+  ])
+})
+
+// The objection #709 has to answer: `id` is an extremely likely student
+// variable name -- a student id, a record id, a lambda parameter. Every binding
+// form shadows the export and runs, and the program means what the student
+// wrote. A *local* binder is silent besides, which scope checking states
+// outright (scope.ts, "local shadowing is allowed across scopes"); a top-level
+// `(define id ...)` warns that a global is already defined, exactly as
+// `(define map 1)` does and as `(define add1 ...)` began to when #572 added
+// add1 -- pinned by 'redefining a prelude binding' in test/scheme/scope.test.ts.
+// That warning is the whole cost of the name, and it does not stop the program:
+// the student's definition still wins, as the last case here shows.
+test('id is shadowed by student code', async () => {
+  expect(
+    await runProgram(`
+(define make-student (lambda (id name) (list id name)))
+(make-student 1234 "sam")
+(let ([id 7]) (* id 6))
+(let ([id 1]) (let ([j (+ id 1)]) j))
+(match (list 1 2) [(cons id rest) id])
+(struct student (id name))
+(student-id (student 1234 "sam"))
+(define id 99)
+id
+`),
+  ).toEqual([
+    // a lambda parameter named id
+    '(list 1234 "sam")',
+    // a let binding named id
+    '42',
+    '2',
+    // a match pattern binding id
+    '1',
+    // a struct field named id (the define itself displays nothing)
+    '1234',
+    // the student's own top-level definition of id, which wins
+    '99',
+  ])
+})
+
 test('length', async () => {
   expect(
     await runProgram(`
@@ -3338,7 +3432,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error: (random) expected an integer as the first argument, received string',
+    'Runtime error: (random) expected a positive-integer as the first argument, received string',
   ])
 })
 
@@ -3590,16 +3684,16 @@ test('fold-left', async () => {
 })
 
 test('reduce-left', async () => {
-  // reduce-left seeds fold-left with the list's first element, so its combiner
-  // takes the current element first and the accumulated value second (SRFI-1's
-  // `reduce`) -- the opposite of `reduce`'s argument order.
+  // reduce-left seeds fold with the list's first element, so its combiner takes
+  // the accumulated value first and the current element second, and the list is
+  // combined from the left -- the direction its name promises (#712).
   expect(
     await runProgram(`
 (reduce-left + (list 1 2 3 4 5))
 (reduce-left + (list 42))
 (reduce-left - (list 1 2 3))
 (reduce-left max (list 3 1 4 1 5 9 2 6))
-(equal? (reduce-left - (list 10 3 2)) (fold-left - 10 (list 3 2)))
+(equal? (reduce-left - (list 10 3 2)) (fold - 10 (list 3 2)))
 (reduce - (list 1 2 3))
 (reduce-left + (list))
 `),
@@ -3607,15 +3701,14 @@ test('reduce-left', async () => {
     '15',
     // a singleton list accumulates to its only element
     '42',
-    // element-first combiner: (- 3 (- 2 1)) = 2
-    '2',
+    // accumulator-first combiner: (- (- 1 2) 3) = -4
+    '-4',
     '9',
-    // reduce-left f l is fold-left f (car l) (cdr l), by definition
+    // reduce-left f l is fold f (car l) (cdr l), by definition
     '#t',
-    // Deliberately pinned divergence: `reduce` combines accumulator-first, so
-    // it gives (- (- 1 2) 3) = -4 where reduce-left gives 2. This is intended
-    // -- it is the same crossing fold and fold-left already have; see the
-    // "Folds: a warning" table in docs/DIFFERENCES.md.
+    // `reduce` agrees with it now (#712); `fold-left` is the one that crosses,
+    // so reduce-left is no longer fold-left seeded with the first element. See
+    // the "Folds: a warning" table in docs/DIFFERENCES.md.
     '-4',
     // the empty list has no first element to start from
     'Runtime error: (reduce-left) car: expected a pair or a non-empty list',

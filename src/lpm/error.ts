@@ -57,10 +57,22 @@ export class ScamperError extends Error {
 export type ArityBound = 'exactly' | 'at least' | 'at most'
 
 /**
+ * @param n a number of arguments.
+ * @returns the noun agreeing with it, "argument" or "arguments". Shared so
+ *          every arity message pluralises the same way (#684); the struct
+ *          constructor's check has its own message shape and so does not reuse
+ *          {@link arityMismatchMsg}, but it can still borrow the word.
+ */
+export function argumentNoun (n: number): string {
+  return n === 1 ? 'argument' : 'arguments'
+}
+
+/**
  * The message both arity checks raise -- the closure check in op-handlers.ts and
- * the optional-argument check in src/js/runtime -- so that "argument" vs
- * "arguments" is decided in one place. `exactly` contributes no words of its
- * own: "expected 2 arguments" is how a fixed arity has always read.
+ * the optional-argument check in src/js/runtime -- so the two cannot drift. The
+ * noun comes from {@link argumentNoun}, which the struct constructor's own
+ * message shares. `exactly` contributes no words of its own: "expected 2
+ * arguments" is how a fixed arity has always read.
  *
  * @param expected the number of arguments `bound` qualifies.
  * @param given how many the call actually passed.
@@ -71,8 +83,7 @@ export function arityMismatchMsg (
   given: number,
 ): string {
   const qualifier = bound === 'exactly' ? '' : `${bound} `
-  const noun = expected === 1 ? 'argument' : 'arguments'
-  return `Arity mismatch in function call: expected ${qualifier}${expected} ${noun}, got ${given}`
+  return `Arity mismatch in function call: expected ${qualifier}${expected} ${argumentNoun(expected)}, got ${given}`
 }
 
 /** Internal compiler errors arise due to bugs in Scamper. */
