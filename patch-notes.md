@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- Ctrl-I now re-indents your file on Windows and Linux, where it had been selecting code instead.
 
 # 4.7.0
 
