@@ -690,6 +690,15 @@ export function prelude_listTake(l: L.Value, k: L.Value): L.List {
 }
 
 export function prelude_listRef(l: L.List, n: number): L.Value {
+  // Guarded before the walk because the walk cannot see it: `i > 0` is false
+  // from the first step when `n` is negative, so it stopped on the head and
+  // `(list-ref (list 1 2 3) -1)` answered 1 (#678).
+  if (n < 0) {
+    throw new L.ScamperError(
+      'Runtime',
+      `list-ref: index ${n} out of bounds of list`,
+    )
+  }
   let i = n
   while (l !== null && i > 0) {
     l = l.tail
