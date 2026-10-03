@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- random now reports an error if the count is not positive, since there is nothing to choose from.
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
 
 # 4.7.0
