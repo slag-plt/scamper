@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- The new string-titlecase capitalizes the first letter of every word in a string and lower-cases the rest.
 
 # 4.7.0
 

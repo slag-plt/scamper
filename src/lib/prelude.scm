@@ -726,20 +726,26 @@
 ;;; (string-upcase s) -> string?
 ;;;  s : string?
 ;;; Returns the upper-case version of `s`.
-;;; @category string, string-downcase, string-foldcase, substring, string-split, string-split-vector
+;;; @category string, string-downcase, string-foldcase, string-titlecase, substring, string-split, string-split-vector
 (define-export string-upcase (js-var "prelude_stringUpcase"))
 
 ;;; (string-downcase s) -> string?
 ;;;  s : string?
 ;;; Returns the lower-case version of `s`.
-;;; @category string, string-upcase, string-foldcase, substring, string-split, string-split-vector
+;;; @category string, string-upcase, string-foldcase, string-titlecase, substring, string-split, string-split-vector
 (define-export string-downcase (js-var "prelude_stringDowncase"))
 
 ;;; (string-foldcase s) -> string?
 ;;;  s : string?
 ;;; Returns the case-folded version of `s`. This is a version of `s` that is appropriate for case-insensitive comparison.
-;;; @category string, string-downcase, string-upcase, substring, string-split, string-split-vector
+;;; @category string, string-downcase, string-upcase, string-titlecase, substring, string-split, string-split-vector
 (define-export string-foldcase (js-var "prelude_stringFoldcase"))
+
+;;; (string-titlecase s) -> string?
+;;;  s : string?
+;;; Returns a version of `s` with each word capitalized: the word's first letter is upper-cased and the rest lower-cased. A word runs through letters, digits and underscores and may hold an apostrophe, so `"y2k"` becomes `"Y2k"` and `"don't"` becomes `"Don't"`; a hyphen or a space ends one, so `"hello-world"` becomes `"Hello-World"`.
+;;; @category string, string-upcase, string-downcase, string-foldcase, substring, string-split, string-split-vector
+(define-export string-titlecase (js-var "prelude_stringTitlecase"))
 
 ;;; (substring s start [end]) -> string?
 ;;;  s : string?

@@ -1001,6 +1001,40 @@ export function prelude_stringFoldcase(s: string): string {
   return s.toLowerCase()
 }
 
+// A word for titlecasing: letters, digits, marks and connector punctuation,
+// which may hold an apostrophe *between* those. So "y2k", "don't" and
+// "foo_bar" are each one word, while a hyphen or a space ends one.
+//
+// `\p{Pc}` rather than a bare `_` because UAX#29 Table 3 defines
+// Word_Break=ExtendNumLet as exactly General_Category=Connector_Punctuation,
+// and WB13a/WB13b make it a word joiner -- so all ten of those characters
+// join, not just the one anybody types.
+const TITLECASE_WORD =
+  /[\p{L}\p{N}\p{M}\p{Pc}]+(?:['’][\p{L}\p{N}\p{M}\p{Pc}]+)*/gu
+
+/**
+ * Titlecases each word of `s`, as Racket's `string-titlecase` does: the first
+ * *cased* character of a word is upper-cased and the rest lower-cased, so a
+ * leading digit does not use up the capital ("y2k" is "Y2k").
+ */
+export function prelude_stringTitlecase(s: string): string {
+  return s.replace(TITLECASE_WORD, (w) => {
+    // `exec` rather than `search` so the match is the whole code point: a
+    // cased character outside the BMP is two UTF-16 units, and upper-casing
+    // the first of them alone would leave it as it was.
+    const cased = /\p{Cased}/u.exec(w)
+    if (cased === null) {
+      return w.toLowerCase()
+    }
+    const [c] = cased
+    return (
+      w.slice(0, cased.index).toLowerCase() +
+      c.toUpperCase() +
+      w.slice(cased.index + c.length).toLowerCase()
+    )
+  })
+}
+
 /** @param end where the substring ends; the end of `s` when left out. */
 export function prelude_substring(s: string, start: number, end?: number): string {
   // R7RS 6.7 requires 0 <= start <= end <= (string-length s) and calls
