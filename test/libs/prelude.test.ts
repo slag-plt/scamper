@@ -2201,6 +2201,125 @@ test('string-ops', async () => {
   ])
 })
 
+// https://github.com/slag-plt/scamper/issues/711
+//
+// `string-titlecase`, as Racket has it. Racket's rule is Unicode's, not a
+// whitespace split: the first *cased* character of each word is titlecased and
+// every later one is downcased, so leading digits and punctuation do not use
+// up the capital ("y2k" is "Y2k", "123abc" is "123Abc"), and an apostrophe
+// does not start a new word ("don't" is "Don't", not "Don'T"). A hyphen,
+// however, does. Whitespace is copied through untouched, so a double space
+// stays a double space.
+//
+// The first two cases are the examples Racket's own documentation shows.
+test('string-titlecase', async () => {
+  expect(
+    await runProgram(`
+(string-titlecase "aBC  twO")
+(string-titlecase "y2k")
+(string-titlecase "hello world")
+(string-titlecase "HELLO WORLD")
+(string-titlecase "Hello World")
+(string-titlecase "hello  world")
+(string-titlecase "don't")
+(string-titlecase "o'brien")
+(string-titlecase "O'BRIEN")
+(string-titlecase "123abc")
+(string-titlecase "3com makes routers.")
+(string-titlecase "hello-world")
+(string-titlecase "mary-jane o'brien")
+(string-titlecase "(hello)")
+(string-titlecase "foo_bar")
+(string-titlecase "foo‿bar")
+`),
+  ).toEqual([
+    // Racket's documented examples
+    '"Abc  Two"',
+    '"Y2k"',
+    '"Hello World"',
+    '"Hello World"',
+    '"Hello World"',
+    // whitespace is copied through, so the double space survives
+    '"Hello  World"',
+    // an apostrophe does not begin a new word
+    '"Don\'t"',
+    '"O\'brien"',
+    '"O\'brien"',
+    // a leading digit does not use up the capital
+    '"123Abc"',
+    '"3Com Makes Routers."',
+    // a hyphen *does* begin a new word, where an apostrophe does not; a
+    // whitespace-only split would answer "Hello-world" here
+    '"Hello-World"',
+    '"Mary-Jane O\'brien"',
+    '"(Hello)"',
+    // connector punctuation joins a word instead of ending one: UAX#29 makes
+    // it Word_Break=ExtendNumLet, a joiner. The underscore is the one anybody
+    // types; U+203F pins that the other nine behave the same way.
+    '"Foo_bar"',
+    '"Foo‿bar"',
+  ])
+})
+
+// The boundaries: nothing to capitalize, and nothing at all.
+test('string-titlecase edge cases', async () => {
+  expect(
+    await runProgram(`
+(string-titlecase "")
+(string-titlecase "a")
+(string-titlecase "A")
+(string-titlecase " ")
+(string-titlecase "   ")
+(string-titlecase "123")
+(string-titlecase "hello\\tworld")
+(string-titlecase "hello\\nworld")
+(string-titlecase "  leading")
+(string-titlecase "trailing  ")
+`),
+  ).toEqual([
+    '""',
+    '"A"',
+    '"A"',
+    '" "',
+    '"   "',
+    '"123"',
+    // every whitespace character separates words, not just the space
+    '"Hello\\tWorld"',
+    '"Hello\\nWorld"',
+    '"  Leading"',
+    '"Trailing  "',
+  ])
+})
+
+// Non-ASCII goes through the same Unicode case mapping `string-upcase` and
+// `string-downcase` use, so an accented letter titlecases as itself.
+test('string-titlecase is Unicode-aware', async () => {
+  expect(
+    await runProgram(`
+(string-titlecase "ñino")
+(string-titlecase "ÉCOLE")
+(string-titlecase "main straße")
+(string-titlecase "𐐨ungla")
+`),
+  ).toEqual([
+    '"Ñino"',
+    '"École"',
+    '"Main Straße"',
+    // a cased character outside the BMP is two UTF-16 units, so capitalizing
+    // the first unit alone would have left the word untouched
+    '"𐐀ungla"',
+  ])
+})
+
+test('string-titlecase rejects a non-string', async () => {
+  expect(await runProgram('(string-titlecase 5)')).toEqual([
+    'Runtime error: (string-titlecase) expected a string as the first argument, received number',
+  ])
+  expect(await runProgram('(string-titlecase)')).toEqual([
+    'Runtime error: (string-titlecase) Arity mismatch in function call: expected 1 argument, got 0',
+  ])
+})
+
 test('string-split', async () => {
   expect(
     await runProgram(`

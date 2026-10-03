@@ -527,6 +527,13 @@ Racket is the language the TypeScript names most often.
 + **`racket/string`.**
   `// Additional functions from racket/string.` heads `string-contains`, `string-split`, `string-split-vector` (`src/js/prelude/index.ts`), and `string-split`'s empty-field behaviour is matched to Racket's deliberately (`src/js/prelude/index.ts`).
   Cited, though `string-split-vector` is not a Racket name either.
+  `string-titlecase` (#711) is Racket's too, and takes its *cased*-character rule rather than a split on spaces: the first cased character of each word is capitalized, so `"y2k"` is `"Y2k"` and `"don't"` is `"Don't"` rather than `"Y2K"` and `"Don'T"`.
+  Scamper's word is a regular expression -- letters, digits, marks and connector punctuation, optionally holding an apostrophe -- standing in for the UAX#29 word segmentation Racket uses, so a word joins across `_` (`"foo_bar"` is one word) because UAX#29 makes connector punctuation a joiner rather than a separator.
+
+  **A word-initial character whose titlecase form differs from its uppercase form is upper-cased.**
+  `(string-titlecase "stra ße")` is `"Stra SSe"` where Racket says `"Stra Sse"`, and `ǆ` becomes `Ǆ` where Racket gives `ǅ`.
+  This is forced rather than chosen: JavaScript exposes `toUpperCase` and `toLowerCase` and no titlecase mapping at all.
+  It reaches every character Unicode gives a distinct titlecase form -- 135 code points: the Greek letters with ypogegrammeni (63), Georgian Mkhedruli (46), the Latin digraphs (12), the Latin and Armenian ligatures (13), and `ß`.
 + **The functional hash interface.**
   `hash-ref`, `hash-set`, `hash-remove`, `hash-keys`, `hash-values`, `hash->list` and the rest follow "Racket's functional hash interface", chosen over SRFI-69/125's mutable `hash-table-*` because those "would not operate on what `{...}` produces" (`src/js/prelude/index.ts`).
 + **Module semantics.**
