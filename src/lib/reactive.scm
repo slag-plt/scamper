@@ -52,12 +52,12 @@
 (define-export on-mouse-click (js-var "reactive_onMouseClick"))
 
 ;;; (on-mouse-hover) -> subscription?
-;;; Returns a subscription that emits a message of the form `(event-mouse-hover x y)` whenever the mouse moves over the reactive element. `(x, y)` are the coordinates of the mouse. If the component cannot keep up, only the most recent position is delivered.
+;;; Returns a subscription that emits a message of the form `(event-mouse-hover x y)` whenever the mouse moves over the reactive element. `(x, y)` are the coordinates of the mouse. Positions arriving faster than the component can process them are dropped; the most recent one is always delivered.
 ;;; @category reactive, subscription?, on-button-click, on-mouse-click
 (define-export on-mouse-hover (js-var "reactive_onMouseHover"))
 
 ;;; (on-key-down) -> subscription?
-;;; Returns a subscription that emits a message of the form `(event-key-down key)` whenever a key is pressed. `key` indicates the key that was pressed.
+;;; Returns a subscription that emits a message of the form `(event-key-down key)` whenever a key is pressed. `key` indicates the key that was pressed. Holding a key down repeats the message; if the component cannot keep up, the repeats it missed arrive as one, though the first press is always delivered.
 ;;; @category reactive, subscription?, on-key-up
 (define-export on-key-down (js-var "reactive_onKeyDown"))
 

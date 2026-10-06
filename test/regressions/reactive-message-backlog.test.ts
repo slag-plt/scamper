@@ -17,6 +17,7 @@ import {
   type NoteHandlers,
 } from '../../src/js/music/index.js'
 import {
+  reactive_onButtonClick,
   reactive_onKeyDown,
   reactive_onKeyUp,
   reactive_onMouseClick,
@@ -54,12 +55,16 @@ function summary(msg: L.Value): string {
 
 describe('#725: a reactive component that falls behind', () => {
   let fibers: Fiber[]
+  let run: AbortController
   /** Every message the update function was actually handed, in order. */
   let delivered: string[]
+  /** The same messages, unsummarised, for the fields `summary` leaves out. */
+  let raw: L.Value[]
 
   /** Records what it is given, so the spec can assert on the delivery. */
   const update = (msg: L.Value, st: L.Value) => {
     delivered.push(summary(msg))
+    raw.push(msg)
     return (st as number) + 1
   }
 
@@ -71,7 +76,8 @@ describe('#725: a reactive component that falls behind', () => {
   beforeEach(() => {
     fibers = []
     delivered = []
-    stubRun(fibers)
+    raw = []
+    run = stubRun(fibers)
     // The canvas asks for an animation frame in its constructor, and jsdom has
     // none. Nothing here drives the draw loop: a view fiber would only add
     // noise to the fiber queue these tests step through.
@@ -83,6 +89,9 @@ describe('#725: a reactive component that falls behind', () => {
   })
 
   afterEach(() => {
+    // Stops the run as the IDE's Stop button does, so the intervals and the
+    // `document` key listeners this spec registered do not reach the next test.
+    run.abort()
     vi.useRealTimers()
     vi.unstubAllGlobals()
     clearRun()
@@ -248,6 +257,108 @@ describe('#725: a reactive component that falls behind', () => {
 
     // Two updates rather than 1001, and all 10.01 seconds still accounted for.
     expect(delivered).toEqual(['timer(10)', 'timer(10000)'])
+  })
+
+  // `elapsed` is not the only field that has to be right. `time` is documented
+  // as the time since the page loaded, so a merged tick carrying the timestamp
+  // of the tick it replaced is a silent wrong answer for a model that stamps
+  // events rather than integrating `elapsed` -- and summing into the waiting
+  // message instead of the arriving one would do exactly that.
+  test('a merged tick carries the newest time, and is still a struct', () => {
+    canvasWith(reactive_onTimer(10))
+
+    vi.advanceTimersByTime(10)
+    vi.advanceTimersByTime(40)
+    runFibers()
+
+    const merged = raw[1] as unknown as Record<string, unknown>
+    expect(merged.elapsed).toBe(40)
+    // 50ms have passed on the fake clock, which is when the last tick fired.
+    expect(merged.time).toBe(50)
+    // The spread has to carry the struct tags, or the value stops being a
+    // Scamper struct and `(match msg [(event-timer time elapsed) ...])` in a
+    // student's program silently stops matching.
+    expect(merged[L.scamperTag]).toBe('struct')
+    expect(merged[L.structKind]).toBe('event-timer')
+    expect(L.getFieldsOfStruct(raw[1] as L.Struct)).toEqual(['time', 'elapsed'])
+  })
+
+  // Holding a key fires keydown at roughly 30 a second for as long as it is
+  // held, so "hold an arrow to move" floods the queue exactly as a timer does
+  // -- and the backlog outlives the release, so the sprite keeps going after
+  // the student lets go. The repeats coalesce; nothing the student did is lost.
+  test('coalesces a held key without losing the press or another key', () => {
+    canvasWith(reactive_onKeyDown(), reactive_onKeyUp())
+    const down = (key: string, repeat = false) => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, repeat }))
+    }
+    const up = (key: string) => {
+      document.dispatchEvent(new KeyboardEvent('keyup', { key }))
+    }
+
+    // The initial press, whose update is left in flight.
+    down('d')
+    expect(fibers).toHaveLength(1)
+    // Auto-repeat, then a second key held at once, then the release.
+    down('d', true)
+    down('d', true)
+    down('d', true)
+    down('w', true)
+    up('d')
+
+    runFibers()
+
+    expect(delivered).toEqual([
+      'event-key-down(d)',
+      // The three repeats of d, as one -- and w is not swallowed by them.
+      'event-key-down(d)',
+      'event-key-down(w)',
+      'event-key-up(d)',
+    ])
+  })
+
+  test('never merges a repeat into the initial press', () => {
+    canvasWith(reactive_onTimer(10), reactive_onKeyDown())
+    const down = (key: string, repeat = false) => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, repeat }))
+    }
+
+    // A tick in flight, so the press itself stays queued behind it.
+    vi.advanceTimersByTime(10)
+    down('d')
+    down('d', true)
+    down('d', true)
+
+    runFibers()
+
+    // The press survives as its own message; the repeats behind it are one.
+    expect(delivered).toEqual([
+      'timer(10)',
+      'event-key-down(d)',
+      'event-key-down(d)',
+    ])
+  })
+
+  // The only discrete kind carrying a payload that "newest wins" would look
+  // plausible for, so worth its own case: two presses of a button are two
+  // presses, not one.
+  test('delivers every button click', () => {
+    const button = document.createElement('button')
+    button.id = 'go'
+    canvasWith(reactive_onButtonClick(button))
+
+    button.click()
+    expect(fibers).toHaveLength(1)
+    button.click()
+    button.click()
+
+    runFibers()
+
+    expect(delivered).toEqual([
+      'event-button-click',
+      'event-button-click',
+      'event-button-click',
+    ])
   })
 
   test('bounds a reactive container the same way', () => {

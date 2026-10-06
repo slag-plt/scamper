@@ -58,11 +58,11 @@ class ReactiveCanvas<T> implements ReactiveElement {
   // as a fiber (L.spawn). Messages are queued and applied one at a time (so the
   // model is never mutated by two overlapping update fibers), with a waiting
   // tick or hover position coalesced rather than queued (see enqueue, #725),
-  // and the view is
-  // coalesced on the rAF loop: at most one view fiber in flight, run only when
-  // the model is dirty. So a view that takes longer than a frame costs frame
-  // *rate* and nothing else -- no second view starts behind it, and the canvas
-  // on screen keeps the last whole frame until this one is finished.
+  // and the view is coalesced on the rAF loop: at most one view fiber in
+  // flight, run only when the model is dirty. So a view that takes longer than
+  // a frame costs frame *rate* and nothing else -- no second view starts behind
+  // it, and the canvas on screen keeps the last whole frame until this one is
+  // finished.
   private queue: Msg[] = []
   private updating = false
   private drawing = false
@@ -304,9 +304,10 @@ type Msg =
  * The newer of two messages of the same *sampled* kind, or undefined when a
  * newer message cannot stand in for `old`.
  *
- * A sampled message -- a timer tick, a hover position -- reports a continuous
- * signal, so only the latest one is interesting. Every other kind is something
- * the student did, and each one means something on its own.
+ * A sampled message -- a timer tick, a hover position, a key's auto-repeat --
+ * reports a signal that is still going on, so only the latest one is
+ * interesting. Every other kind, the initial press of a key included, is
+ * something the student did, and each one means something on its own.
  */
 function merged(old: Msg, msg: Msg): Msg | undefined {
   // A switch, rather than a table keyed by kind: this is what narrows the union.
@@ -321,6 +322,19 @@ function merged(old: Msg, msg: Msg): Msg | undefined {
         : undefined
     case 'event-mouse-hover':
       return old[L.structKind] === 'event-mouse-hover' ? msg : undefined
+    case 'event-key-down':
+      // Auto-repeat is a machine-rate source too -- around 30 a second for as
+      // long as the key is held -- so "hold an arrow to move" floods the queue
+      // exactly as a timer does, and the lag outlives the release. Only a
+      // repeat merges, and only into a repeat of the same key: the initial
+      // press is something the student did and is always delivered, and a
+      // second key held at once is never swallowed by the first.
+      return old[L.structKind] === 'event-key-down' &&
+        old.key === msg.key &&
+        old[repeatField] &&
+        msg[repeatField]
+        ? msg
+        : undefined
     default:
       return undefined
   }
@@ -336,8 +350,13 @@ function merged(old: Msg, msg: Msg): Msg | undefined {
  * survivor goes to the back, which is where it belongs: being the newest, it
  * happened after everything already waiting.
  *
- * Nothing merges while a program keeps up, since a message is only ever
- * waiting when the update ahead of it has not finished.
+ * A timer never merges while a program keeps up: `setInterval` cannot have two
+ * callbacks pending at once, so two waiting ticks mean the update has survived
+ * two scheduler yields. Hover is not quite so safe -- several `mousemove` tasks
+ * can queue, and an input task outranks the scheduler's own continuation -- so
+ * two positions can land in one gap even when nothing is behind. Browsers
+ * coalesce pointer moves to roughly one a frame, so this is rare, and the
+ * alternative is the latency this fixes.
  */
 function enqueue(queue: Msg[], msg: Msg): Msg[] {
   for (let i = 0; i < queue.length; i++) {
@@ -369,9 +388,18 @@ interface TimerMsg extends L.Struct {
   time: number, elapsed: number
 }
 
+/**
+ * The field a key-down message carries its auto-repeat flag in. Hidden --
+ * `##...##` -- so `getFieldsOfStruct` filters it out and pattern matching,
+ * equality and every renderer stay blind to it: `(event-key-down key)` is still
+ * a one-field struct to a student.
+ */
+const repeatField = '##repeat##'
+
 interface KeyDownMsg extends L.Struct {
   [L.structKind]: 'event-key-down',
-  key: string
+  key: string,
+  [repeatField]: boolean
 }
 
 interface KeyUpMsg extends L.Struct {
@@ -439,7 +467,8 @@ export function reactive_onKeyDown(): Subscription {
     document.addEventListener('keydown', (event) => {
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-down',
-        key: event.key
+        key: event.key,
+        [repeatField]: event.repeat
       })
     }, { signal: run.signal })
   })
