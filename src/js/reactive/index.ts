@@ -40,6 +40,13 @@ class ReactiveCanvas<T> implements ReactiveElement {
   private readonly run: L.RunHandle = L.currentRun()
 
   canvas: HTMLCanvasElement
+  // The canvas the view paints, which is not the one on screen (#724). A view
+  // fiber cannot finish inside the frame that spawned it -- the scheduler
+  // yields to the event loop before stepping it -- so clearing the canvas on
+  // screen and repainting it are separated by at least one composite, and a
+  // student sees that gap as a flicker. The view draws a whole frame here
+  // instead, and only a finished frame is copied across.
+  private readonly buffer: HTMLCanvasElement
   state: T
   /* (state: T, canvas: HTMLCanvasElement) => void */
   viewFunc: L.ScamperFn
@@ -51,7 +58,9 @@ class ReactiveCanvas<T> implements ReactiveElement {
   // as a fiber (L.spawn). Messages are queued and applied one at a time (so the
   // model is never mutated by two overlapping update fibers), and the view is
   // coalesced on the rAF loop: at most one view fiber in flight, run only when
-  // the model is dirty.
+  // the model is dirty. So a view that takes longer than a frame costs frame
+  // *rate* and nothing else -- no second view starts behind it, and the canvas
+  // on screen keeps the last whole frame until this one is finished.
   private queue: Msg[] = []
   private updating = false
   private drawing = false
@@ -65,6 +74,9 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.canvas = document.createElement('canvas')
     this.canvas.width = width
     this.canvas.height = height
+    this.buffer = document.createElement('canvas')
+    this.buffer.width = width
+    this.buffer.height = height
     this.state = state
     this.viewFunc = view
     this.updateFunc = update
@@ -94,14 +106,30 @@ class ReactiveCanvas<T> implements ReactiveElement {
     }
     this.drawing = true
     this.isDirty = false
-    context2d(this.canvas).clearRect(0, 0, this.canvas.width, this.canvas.height)
-    this.run.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
+    context2d(this.buffer).clearRect(0, 0, this.buffer.width, this.buffer.height)
+    this.run.spawn(this.viewFunc, [this.state as L.Value, this.buffer], (result) => {
       this.drawing = false
+      // The run was stopped while this frame was drawing, so there is nothing
+      // left to show it on.
+      if (this.finished) {
+        return
+      }
+      // Whatever the view managed to paint is shown, error or not: a view that
+      // failed half way through used to leave its partial frame on screen,
+      // having painted the canvas on screen directly.
+      this.present()
       // A view error is reported to the output pane (result === null); stop.
       if (result === null) {
         this.finished = true
       }
     })
+  }
+
+  /** Copies the finished frame onto the canvas on screen, in one step. */
+  private present() {
+    const ctx = context2d(this.canvas)
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    ctx.drawImage(this.buffer, 0, 0)
   }
 
   update (msg: Msg) {
