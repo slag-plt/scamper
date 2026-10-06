@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Animations made with reactive-canvas no longer flicker; each frame now appears all at once.
+
 # 4.8.0
 
 > Clearer errors when a number is out of range, and two new procedures.

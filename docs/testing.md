@@ -63,10 +63,12 @@ Paths in the tree below are relative to `test/`.
 ## Browser-mode tests
 
 A `*.browser.test.ts` file runs under real headless Chromium via Vitest's browser mode and Playwright (`test/vitest.browser.config.ts`).
-This is needed by three features utilized by Scamper:
+This is needed by four features utilized by Scamper:
 
 + A real Canvas2D and font-metrics implementation — `test/libs/canvas.browser.test.ts` and `test/libs/image.browser.test.ts`, for pixel rendering, `getImageData` round-trips, and `measureText`.
 + Real layout, for a component's geometry.
++ Real animation-frame timing against the real scheduler — `test/regressions/reactive-canvas-flicker.browser.test.ts`, which samples what a frame actually puts on screen.
+  A mock cannot say when a spawned fiber runs relative to a composite, which is what #724 turned on.
 + Real OPFS — `test/fs/opfs.browser.test.ts`, and the #429 regression, which removes `createWritable` to exercise the fallback worker a Safari user gets.
   `test/apps/files/files.browser.test.ts` is the other half of that: it pins that the rescue page shows the `.crswap` file the IDE hides, which only Chromium produces.
 
