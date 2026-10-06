@@ -56,7 +56,9 @@ class ReactiveCanvas<T> implements ReactiveElement {
   finished: boolean
   // Update and view can no longer be called synchronously from JS -- each runs
   // as a fiber (L.spawn). Messages are queued and applied one at a time (so the
-  // model is never mutated by two overlapping update fibers), and the view is
+  // model is never mutated by two overlapping update fibers), with a waiting
+  // tick or hover position coalesced rather than queued (see enqueue, #725),
+  // and the view is
   // coalesced on the rAF loop: at most one view fiber in flight, run only when
   // the model is dirty. So a view that takes longer than a frame costs frame
   // *rate* and nothing else -- no second view starts behind it, and the canvas
@@ -146,7 +148,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     if (this.finished) {
       return
     }
-    this.queue.push(msg)
+    this.queue = enqueue(this.queue, msg)
     this.processQueue()
   }
 
@@ -204,7 +206,10 @@ class ReactiveContainer<T> implements ReactiveElement {
   finished: boolean
   // As with ReactiveCanvas, update and view run as fibers (L.spawn). Messages
   // are processed one at a time, each fully (update, then re-render) before the
-  // next, so a message never sees a half-applied update.
+  // next, so a message never sees a half-applied update -- and a waiting tick
+  // or hover position is coalesced rather than queued (see enqueue, #725).
+  // This component is the more exposed of the two: it re-renders per message
+  // rather than once a frame, so its per-message bill is the larger.
   private queue: Msg[] = []
   private processing = false
 
@@ -245,7 +250,7 @@ class ReactiveContainer<T> implements ReactiveElement {
     if (this.finished) {
       return
     }
-    this.queue.push(msg)
+    this.queue = enqueue(this.queue, msg)
     this.processQueue()
   }
 
@@ -294,6 +299,55 @@ type Msg =
   | KeyUpMsg
   | TimerMsg
   | NoteMsg   // from music
+
+/**
+ * The newer of two messages of the same *sampled* kind, or undefined when a
+ * newer message cannot stand in for `old`.
+ *
+ * A sampled message -- a timer tick, a hover position -- reports a continuous
+ * signal, so only the latest one is interesting. Every other kind is something
+ * the student did, and each one means something on its own.
+ */
+function merged(old: Msg, msg: Msg): Msg | undefined {
+  // A switch, rather than a table keyed by kind: this is what narrows the union.
+  switch (msg[L.structKind]) {
+    case 'event-timer':
+      return old[L.structKind] === 'event-timer'
+        // The time that passed is summed rather than discarded, so a model
+        // that integrates `elapsed` keeps real-time pace however far behind it
+        // falls. A model that counts ticks instead advances more slowly, which
+        // is what a dropped frame honestly means.
+        ? { ...msg, elapsed: old.elapsed + msg.elapsed }
+        : undefined
+    case 'event-mouse-hover':
+      return old[L.structKind] === 'event-mouse-hover' ? msg : undefined
+    default:
+      return undefined
+  }
+}
+
+/**
+ * `queue` with `msg` added, folded into a waiting message of the same sampled
+ * kind rather than growing the queue (#725).
+ *
+ * Each message costs a whole fiber to process, so without this a component
+ * whose update cannot keep up queues them forever: memory, and -- what a
+ * student actually notices -- a click waiting behind every stale tick. The
+ * survivor goes to the back, which is where it belongs: being the newest, it
+ * happened after everything already waiting.
+ *
+ * Nothing merges while a program keeps up, since a message is only ever
+ * waiting when the update ahead of it has not finished.
+ */
+function enqueue(queue: Msg[], msg: Msg): Msg[] {
+  for (let i = 0; i < queue.length; i++) {
+    const combined = merged(queue[i], msg)
+    if (combined !== undefined) {
+      return [...queue.slice(0, i), ...queue.slice(i + 1), combined]
+    }
+  }
+  return [...queue, msg]
+}
 
 interface ButtonClickMsg extends L.Struct {
   [L.structKind]: 'event-button-click',

@@ -52,7 +52,7 @@
 (define-export on-mouse-click (js-var "reactive_onMouseClick"))
 
 ;;; (on-mouse-hover) -> subscription?
-;;; Returns a subscription that emits a message of the form `(event-mouse-hover x y)` whenever the mouse moves over the reactive element. `(x, y)` are the coordinates of the mouse.
+;;; Returns a subscription that emits a message of the form `(event-mouse-hover x y)` whenever the mouse moves over the reactive element. `(x, y)` are the coordinates of the mouse. If the component cannot keep up, only the most recent position is delivered.
 ;;; @category reactive, subscription?, on-button-click, on-mouse-click
 (define-export on-mouse-hover (js-var "reactive_onMouseHover"))
 
@@ -69,7 +69,7 @@
 ;;; (on-timer interval) -> subscription?
 ;;;  interval : integer?
 ;;;   non-negative
-;;; Returns a subscription that emits a message of the form `(event-timer time elapsed)` every `interval` milliseconds. `time` is the current time since the page was loaded and `elapsed` is the time since the last timer message, all in milliseconds.
+;;; Returns a subscription that emits a message of the form `(event-timer time elapsed)` every `interval` milliseconds. `time` is the current time since the page was loaded and `elapsed` is the time since the last timer message, all in milliseconds. If the component cannot keep up, the ticks it missed arrive as a single message whose `elapsed` covers them all, so no time is lost.
 ;;; @category reactive, subscription?, on-note
 (define-export on-timer (js-var "reactive_onTimer"))
 

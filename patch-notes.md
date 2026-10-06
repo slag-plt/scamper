@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Animations made with reactive-canvas no longer flicker; each frame now appears all at once.
+- A reactive canvas or container that falls behind no longer gets steadily less responsive; clicks and key presses land promptly.
 
 # 4.8.0
 
