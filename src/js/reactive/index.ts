@@ -42,10 +42,10 @@ class ReactiveCanvas<T> implements ReactiveElement {
   canvas: HTMLCanvasElement
   // The canvas the view paints, which is not the one on screen (#724). A view
   // fiber cannot finish inside the frame that spawned it -- the scheduler
-  // yields to the event loop before stepping it -- so clearing the canvas on
-  // screen and repainting it are separated by at least one composite, and a
-  // student sees that gap as a flicker. The view draws a whole frame here
-  // instead, and only a finished frame is copied across.
+  // yields to the event loop first -- so clearing the visible canvas and
+  // repainting it were separated by a composite, and a student saw the gap as a
+  // flicker. The view draws a whole frame here, and only a finished one is
+  // copied across.
   private readonly buffer: HTMLCanvasElement
   state: T
   /* (state: T, canvas: HTMLCanvasElement) => void */
@@ -108,16 +108,20 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.isDirty = false
     context2d(this.buffer).clearRect(0, 0, this.buffer.width, this.buffer.height)
     this.run.spawn(this.viewFunc, [this.state as L.Value, this.buffer], (result) => {
-      this.drawing = false
-      // The run was stopped while this frame was drawing, so there is nothing
-      // left to show it on.
-      if (this.finished) {
+      // Stopped mid-frame: a spawned fiber is not a child of its run, so a
+      // cancel does not reach this one and it finishes anyway. Its frame is
+      // dropped rather than put on screen as the program ends. Deliberately
+      // `aborted` rather than `finished`, which an *update* error also sets --
+      // and a frame that finished is worth showing even as the program stops.
+      if (this.run.signal?.aborted === true) {
+        this.drawing = false
         return
       }
       // Whatever the view managed to paint is shown, error or not: a view that
       // failed half way through used to leave its partial frame on screen,
       // having painted the canvas on screen directly.
       this.present()
+      this.drawing = false
       // A view error is reported to the output pane (result === null); stop.
       if (result === null) {
         this.finished = true
@@ -127,6 +131,12 @@ class ReactiveCanvas<T> implements ReactiveElement {
 
   /** Copies the finished frame onto the canvas on screen, in one step. */
   private present() {
+    // `width`/`height` are whatever the student asked for, and drawImage throws
+    // on a zero-dimension source -- out of a spawn callback, where there is no
+    // onFatal to catch it, so it would take the scheduler's loop down with it.
+    if (this.buffer.width === 0 || this.buffer.height === 0) {
+      return
+    }
     const ctx = context2d(this.canvas)
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
     ctx.drawImage(this.buffer, 0, 0)

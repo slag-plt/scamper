@@ -28,7 +28,7 @@ type Fiber = () => void
  * stepping a spawned fiber, so the gap between a frame starting and its view
  * finishing is where the flicker was visible.
  */
-function stubRun(fibers: Fiber[]): void {
+function stubRun(fibers: Fiber[]): AbortController {
   const controller = new AbortController()
   L.setRunResolver(() => ({
     spawn: (fn, args, onComplete) => {
@@ -46,6 +46,8 @@ function stubRun(fibers: Fiber[]): void {
     },
     signal: controller.signal,
   }))
+  // Returned so a test can stop the run the way the IDE's Stop button does.
+  return controller
 }
 
 /** The 2d calls made on `canvas`, in order, as recorded by vitest-canvas-mock. */
@@ -59,6 +61,7 @@ function calls(canvas: HTMLCanvasElement): string[] {
 describe('a reactive canvas does not flicker', () => {
   let fibers: Fiber[]
   let frames: FrameRequestCallback[]
+  let run: AbortController
 
   /** The view: it paints one rectangle, so a frame is visible in the record. */
   const view = (_st: L.Value, canv: L.Value) => {
@@ -89,10 +92,22 @@ describe('a reactive canvas does not flicker', () => {
     }
   }
 
+  /**
+   * Runs just the fiber at `index`, leaving the rest in flight.
+   *
+   * The scheduler round-robins the tasks it holds, so an update fiber really
+   * can finish while a view fiber is still drawing; this is how a test picks
+   * that order.
+   */
+  function runFiberAt(index: number): void {
+    const [fiber] = fibers.splice(index, 1)
+    fiber()
+  }
+
   beforeEach(() => {
     fibers = []
     frames = []
-    stubRun(fibers)
+    run = stubRun(fibers)
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       frames.push(cb)
       return frames.length
@@ -247,5 +262,81 @@ describe('a reactive canvas does not flicker', () => {
     // Off screen, which is the whole point: it is not the canvas being shown.
     expect(buffer).not.toBe(canvas)
     expect(document.body.contains(buffer as HTMLCanvasElement)).toBe(false)
+  })
+
+  // The buffer has to be wiped before each frame, or frames smear into each
+  // other -- every animation would leave trails. Nothing else here looks at the
+  // buffer, so without this the clear could be deleted with the suite still green.
+  test('the buffer is cleared before each frame', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const handed: L.Value[] = []
+    const record = (st: L.Value, canv: L.Value) => {
+      handed.push(canv)
+      view(st, canv)
+      return undefined
+    }
+    reactive_reactiveCanvas(100, 50, 0, record, update, reactive_onTimer(10))
+
+    runFrame()
+    runFibers()
+    vi.advanceTimersByTime(10)
+    runFibers()
+    runFrame()
+    runFibers()
+
+    // The same buffer both times, cleared at the start of each frame.
+    expect(handed).toHaveLength(2)
+    expect(handed[1]).toBe(handed[0])
+    const buffer = handed[0] as HTMLCanvasElement
+    expect(calls(buffer)).toEqual([
+      'clearRect',
+      'fillRect',
+      'clearRect',
+      'fillRect',
+    ])
+  })
+
+  // Stopping the program mid-frame drops that frame rather than putting it on
+  // screen on the way out. A spawned fiber is not a child of its run, so a
+  // cancel does not reach the view still drawing -- it finishes regardless.
+  test('a frame finishing after the program was stopped is dropped', () => {
+    const canvas = reactive_reactiveCanvas(100, 50, 0, view, update)
+
+    runFrame()
+    run.abort()
+    runFibers()
+
+    expect(calls(canvas)).toEqual([])
+  })
+
+  // An *update* error also sets `finished`, but a view that finished is still
+  // worth showing: the student gets their picture and the error, not a blank
+  // box. This is why the guard above tests `aborted` rather than `finished`.
+  test('a frame finishing after an update error is still shown', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const failing = () => {
+      throw new L.ScamperError('Runtime', 'the update gave up')
+    }
+    const canvas = reactive_reactiveCanvas(
+      100,
+      50,
+      0,
+      view,
+      failing,
+      reactive_onTimer(10),
+    )
+
+    // A view in flight, with an update queued behind it.
+    runFrame()
+    vi.advanceTimersByTime(10)
+    expect(fibers).toHaveLength(2)
+
+    // The update fails while the view is still drawing.
+    runFiberAt(1)
+    expect(calls(canvas)).toEqual([])
+
+    // The view finishes, and its frame still reaches the screen.
+    runFibers()
+    expect(calls(canvas)).toEqual(['clearRect', 'drawImage'])
   })
 })
