@@ -27,6 +27,10 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+# 4.8.1
+
+> Reactive animations run smoothly and stay responsive.
+
 - Animations made with reactive-canvas no longer flicker; each frame now appears all at once.
 - A reactive program that cannot keep up with its timer, the mouse, or a held key no longer falls further and further behind; it skips ahead instead of replaying everything it missed, so clicks and key presses still land promptly.
 
