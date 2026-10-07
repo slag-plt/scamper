@@ -1,5 +1,5 @@
 import { ErrorChannel, ICE, OutputChannel, rangesEqual, ReportError, ScamperError, SetRecursionDepthSignal, SuspendSignal, Value } from '.'
-import { blockOnStep, Fiber, StepResult } from './fiber'
+import { blockOnStep, Fiber, minorStep, StepResult } from './fiber'
 import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput, mkTraceStart } from './trace/index.js'
@@ -82,6 +82,12 @@ interface Suspension {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * How many bytecode ops run between checks of the execution quantum. See the
+ * loop in `execute`.
+ */
+const OPS_PER_CLOCK_CHECK = 256
 
 export class Scheduler {
   // invariant: tasks should ONLY contain non-completed fibers.
@@ -887,7 +893,25 @@ export class Scheduler {
       // run-in-progress) before fibers run in this frame.
       await schedulerYield()
       const startTime = performance.now()
-      while (performance.now() - startTime < this.timeQuantum) {
+      // The quantum is consulted every OPS_PER_CLOCK_CHECK steps, not on every
+      // one: a step is a single bytecode op, so reading the clock per iteration
+      // cost a compute-bound program ~7% of its runtime (#730).
+      //
+      // Only *minor* steps are batched. A non-minor step can apply a native of
+      // any cost -- `canvas->pixels` on a photo, say -- so a batch spanning
+      // those would overshoot the quantum by 256 times whatever the dearest one
+      // took, not by the tens of microseconds 256 bytecode ops cost. Each one
+      // therefore resets the count below, which keeps the old per-step bound
+      // exactly where cost is unbounded.
+      let opsUntilClockCheck = 0
+      for (;;) {
+        if (opsUntilClockCheck === 0) {
+          if (performance.now() - startTime >= this.timeQuantum) {
+            break
+          }
+          opsUntilClockCheck = OPS_PER_CLOCK_CHECK
+        }
+        opsUntilClockCheck--
         if (this.currentLoop !== loop) {
           break
         }
@@ -916,6 +940,26 @@ export class Scheduler {
             // anything running during that await belongs to no task.
             this.steppingTaskId = undefined
           }
+          // A minor step -- a `var`, `lit`, `cls`, or scope/handler bookkeeping
+          // op, which is most of what a program runs -- cannot emit output,
+          // park a step gate, or apply a native, so `processStepResult` walks
+          // its branches only to return false. Skipping the call skips the
+          // per-step `await` with it, worth ~75ns of a ~300ns step (#730).
+          // Every step that can `send` still awaits, so #515's cancellation
+          // boundary and #415's round-robin fairness are untouched. A task
+          // being single-stepped is excluded: its gate records the statement
+          // index on every step, and interactive stepping has nothing to gain.
+          if (
+            stepResult === minorStep &&
+            !(isDisplayTask(task) && task.stepping)
+          ) {
+            this.moveNextTask(task)
+            continue
+          }
+          // This step may have applied a native of unbounded cost, so the
+          // batch's bound no longer holds across it: re-check the quantum on
+          // the next iteration.
+          opsUntilClockCheck = 0
           // A step that suspended the fiber (block-on, import-file) or parked it
           // has already taken the task out of the run queue and owns re-scheduling
           // it; settling its place here as well is not this iteration's to do.

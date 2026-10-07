@@ -63,6 +63,15 @@ export class Env {
   private topLevel: Map<string, Value>
   /** A stack of local binding scopes; the last element is the innermost. */
   private locals: Scope[]
+  /**
+   * `imports`' values, newest first: what step 3 of lookup scans. Memoized
+   * because every name that resolves to a library -- which is most of them, the
+   * whole standard library included -- reaches that step, and rebuilding the
+   * list there made two arrays per variable reference (#730). Safe to hold
+   * because `imports` is never mutated in place: extendImports builds a new Map
+   * for a new Env.
+   */
+  private importsReversed?: Module[]
 
   /** Constructs a new environemnt from the given maps */
   constructor(
@@ -79,6 +88,12 @@ export class Env {
 
   /** The empty environment */
   static empty: Env = new Env(new Map(), new Map(), [])
+
+  /** `imports`' libraries, most recently imported first. Memoized; see the field. */
+  private importsNewestFirst(): Module[] {
+    this.importsReversed ??= [...this.imports.values()].reverse()
+    return this.importsReversed
+  }
 
   /**
    * @param name the (simple) name of the variable to look up
@@ -120,7 +135,7 @@ export class Env {
       return { found: true, slot: this.topLevel.get(name), local: false }
     }
     // 3. Imported modules, most recent imports first
-    for (const library of [...this.imports.values()].toReversed()) {
+    for (const library of this.importsNewestFirst()) {
       if (library.bindings.has(name)) {
         return { found: true, slot: library.bindings.get(name), local: false }
       }

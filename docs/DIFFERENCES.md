@@ -319,7 +319,7 @@ By contrast `(eqv? (sqrt -1) (sqrt -1))` is `#f`: `NaN` is not `eqv?` to itself,
 
 ### Pairs, lists and mutation
 
-**A pair and a cons cell are different types**, following Clojure (`src/lpm/lang.ts:586-588`, `src/js/prelude/index.ts`).
+**A pair and a cons cell are different types**, following Clojure (`src/lpm/lang.ts:601-603`, `src/js/prelude/index.ts`).
 A cons cell's tail must be a list; a pair holds any two values.
 So `cons` does not build a pair:
 
@@ -497,7 +497,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | 6.1 Equivalence | all three present; `eq?` is a second name for `eqv?` | added in issue #641 once `ref`/`hash-set!` made identity worth asking about. Deviations: `2` is `eqv?` to `2.0`, and `0` to `-0` |
 | 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises; `square` is `sqr`; `string->number` takes a radix, `number->string` does not | design: "the Javascript numeric stack" (`index.ts`); `sqr` frees `square` for the image library (`prelude.scm`). `gcd`/`lcm` **not yet** (`index.ts`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
-| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:586`); "the pure, functional subset" (`index.ts`) |
+| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:601`); "the pure, functional subset" (`index.ts`) |
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
 | 6.6 Characters | essentially complete | -- |
 | 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`index.ts`); `string-set!` "since it is effectful" (`index.ts`) |
@@ -580,7 +580,7 @@ What is Clojure, each attributed in the source:
 + **The anonymous function `#(...)`** with `%`/`%1`/`%2`/`%&` -- "A Clojure-style anonymous function" (`:78`, `src/scheme/ast.ts:237`, `src/scheme/anon-tokens.ts:4`).
   Nesting is disallowed, matching Clojure (#605, settling issue #571).
 + **The `&` rest-parameter marker** -- "Clojure-style" (`src/scheme/syntax.grammar:147-153`).
-+ **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:586-588`), echoed at `src/js/prelude/index.ts`.
++ **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:601-603`), echoed at `src/js/prelude/index.ts`.
 
 ### From SRFI-1 and the ML family
 

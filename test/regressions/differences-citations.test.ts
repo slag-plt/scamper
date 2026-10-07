@@ -133,7 +133,7 @@ const ANCHORS: Record<string, string | undefined> = {
   // Numbers
   '`src/scheme/syntax.grammar:121-126`': 'Number {',
   // Pairs, lists and mutation
-  '`src/lpm/lang.ts:586-588`': "We follow Clojure's lead",
+  '`src/lpm/lang.ts:601-603`': "We follow Clojure's lead",
   // Exceptions
   '`src/scheme/raise.ts:230`': 'with-handler is now an ordinary procedure',
   // Recursion
@@ -145,7 +145,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/scheme/syntax.grammar:98`': 'kw<"import">',
   '`src/scheme/scope.ts:481-492`': 'This matches Racket module semantics',
   // Summary table
-  '`lang.ts:586`': "We follow Clojure's lead",
+  '`lang.ts:601`': "We follow Clojure's lead",
   '`syntax.grammar:5-9`': 'is a map literal',
   // From Racket
   '`docs/formatting.md:3`': "DrRacket's rules",

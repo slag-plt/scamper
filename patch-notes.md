@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.
+
 # 4.8.1
 
 > Reactive animations run smoothly and stay responsive.
