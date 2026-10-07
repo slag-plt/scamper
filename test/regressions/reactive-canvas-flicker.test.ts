@@ -16,39 +16,13 @@ import {
   canvas_canvasWidth,
 } from '../../src/js/canvas'
 import { reactive_onTimer, reactive_reactiveCanvas } from '../../src/js/reactive'
-
-/** A spawned fiber the test has not let run yet. */
-type Fiber = () => void
-
-/**
- * Stands in for the run a reactive component spawns into, holding each fiber
- * until the test runs it.
- *
- * The holding is the point: the real scheduler yields to the event loop before
- * stepping a spawned fiber, so the gap between a frame starting and its view
- * finishing is where the flicker was visible.
- */
-function stubRun(fibers: Fiber[]): AbortController {
-  const controller = new AbortController()
-  L.setRunResolver(() => ({
-    spawn: (fn, args, onComplete) => {
-      fibers.push(() => {
-        let result: L.Value | null
-        try {
-          result = (fn as L.JsFunction)(...args)
-        } catch {
-          // What the real spawn hands back for a fiber that raised: the error
-          // has gone to the program's error channel, and `null` is the result.
-          result = null
-        }
-        onComplete?.(result)
-      })
-    },
-    signal: controller.signal,
-  }))
-  // Returned so a test can stop the run the way the IDE's Stop button does.
-  return controller
-}
+import {
+  clearRun,
+  runFiberAt as runHeldFiberAt,
+  runFibers as runHeldFibers,
+  stubRun,
+  type Fiber,
+} from '../reactive-run'
 
 /** The 2d calls made on `canvas`, in order, as recorded by vitest-canvas-mock. */
 function calls(canvas: HTMLCanvasElement): string[] {
@@ -87,21 +61,12 @@ describe('a reactive canvas does not flicker', () => {
 
   /** Runs every fiber spawned so far, as the scheduler eventually would. */
   function runFibers(): void {
-    while (fibers.length > 0) {
-      L.shiftRequired(fibers, 'a spawned fiber')()
-    }
+    runHeldFibers(fibers)
   }
 
-  /**
-   * Runs just the fiber at `index`, leaving the rest in flight.
-   *
-   * The scheduler round-robins the tasks it holds, so an update fiber really
-   * can finish while a view fiber is still drawing; this is how a test picks
-   * that order.
-   */
+  /** Runs just the fiber at `index`, leaving the rest in flight. */
   function runFiberAt(index: number): void {
-    const [fiber] = fibers.splice(index, 1)
-    fiber()
+    runHeldFiberAt(fibers, index)
   }
 
   beforeEach(() => {
@@ -117,7 +82,7 @@ describe('a reactive canvas does not flicker', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.useRealTimers()
-    L.setRunResolver(() => undefined)
+    clearRun()
   })
 
   test('the canvas on screen is untouched while a frame is in flight', () => {
