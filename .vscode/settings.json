@@ -1,0 +1,6 @@
+{
+	// Vitest Explorer otherwise runs every *vite*.config* it finds as its own
+	// project, including the embed build config, which has no test setup.
+	// Browser tests stay opt-in, as on the command line: npm run test:browser.
+	"vitest.rootConfig": "vite.config.ts"
+}
