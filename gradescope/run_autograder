@@ -18,6 +18,8 @@
 #
 #   SCAMPER_DIR=~/scamper SOURCE_DIR=. SUBMISSION_DIR=./student \
 #     RESULTS_DIR=/tmp/results WORK_DIR=/tmp/work ./run_autograder
+#
+# On macOS, rehearsing needs GNU timeout: `brew install coreutils`.
 
 set -uo pipefail
 
@@ -30,6 +32,17 @@ WORK_DIR="${WORK_DIR:-/autograder/work}"
 # How long a submission gets. A student's own infinite loop is the usual reason
 # this matters; without it the whole autograder run is killed with no results.
 TIMEOUT="${SCAMPER_TIMEOUT:-120}"
+
+# GNU timeout, which Homebrew's coreutils names gtimeout. Without either, stop
+# rather than give every submission a zero for a fault that is not the student's.
+if command -v timeout > /dev/null; then
+  TIMEOUT_CMD=timeout
+elif command -v gtimeout > /dev/null; then
+  TIMEOUT_CMD=gtimeout
+else
+  echo "run_autograder: needs GNU timeout; on macOS, brew install coreutils" >&2
+  exit 1
+fi
 
 RESULTS_FILE="${RESULTS_DIR}/results.json"
 # The harness's stdout and stderr, kept apart from WORK_DIR so a submitted file
@@ -47,7 +60,7 @@ cp "${SOURCE_DIR}/autograder.scm" "${WORK_DIR}/"
 # `npx tsx`, not `npm run cli`: npm prints its own banner to stdout, and stdout
 # here is the results file. Errors go to stderr, which is kept for the fallback
 # below. Both land outside the work directory, which the student can write to.
-timeout "${TIMEOUT}" npx --prefix "${SCAMPER_DIR}" tsx \
+"${TIMEOUT_CMD}" "${TIMEOUT}" npx --prefix "${SCAMPER_DIR}" tsx \
   "${SCAMPER_DIR}/src/app/cli/index.ts" "${WORK_DIR}/autograder.scm" \
   > "${RAW_DIR}/results.json" 2> "${RAW_DIR}/stderr.txt"
 status=$?

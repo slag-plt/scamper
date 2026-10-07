@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, test } from 'vitest'
@@ -47,10 +47,13 @@ function runHarness(layout: Layout): { results: unknown; status: number | null }
         SCAMPER_TIMEOUT: '30',
       },
     })
+    const resultsFile = path.join(dir, 'results', 'results.json')
+    // A script that stops before grading says why on stderr.
+    if (!existsSync(resultsFile)) {
+      throw new Error(`run_autograder wrote no results:\n${result.stderr}`)
+    }
     return {
-      results: JSON.parse(
-        readFileSync(path.join(dir, 'results', 'results.json'), 'utf-8'),
-      ),
+      results: JSON.parse(readFileSync(resultsFile, 'utf-8')),
       status: result.status,
     }
   } finally {
