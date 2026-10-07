@@ -1,6 +1,6 @@
 import { arityMismatchMsg, ICE, ScamperError, SetRecursionDepthSignal, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
-import { Ops, Scope, Value } from '../lang'
+import { HOLE, Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
 import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, mkMatch, patVars, pMatch, popRequired, typeOf, vectorToList } from '../util'
@@ -19,10 +19,22 @@ export const LitHandler: OpHandler<'lit'> = (op, currFrame) => {
 }
 
 export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
-  if (!currFrame.env.has(op.name)) {
+  // One walk of the environment, not three: `has`, `get`, and `isLocal` each
+  // resolved `op.name` from scratch, and a variable reference is the most
+  // common op a program runs -- three walks of every local scope, the top
+  // level, and each imported library, per reference (#730). A single `lookup`
+  // already reports all three facts.
+  const r = currFrame.env.lookup(op.name)
+  if (!r.found) {
     throw new ScamperError('Runtime', `Variable not found: ${op.name}`)
   }
-  const value = currFrame.env.get(op.name)
+  if (r.slot === HOLE) {
+    throw new ScamperError(
+      'Runtime',
+      `Variable "${op.name}" is referenced before it is defined`,
+    )
+  }
+  const value = r.slot
   // Library code naming another library function by its top-level name gets
   // the value *behind* its contract wrapper (#476). The check exists to
   // describe a student's mistake at their own call site; re-running it on each
@@ -33,7 +45,7 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
     currFrame.origin === 'builtin' &&
     isClosure(value) &&
     value.contractTarget !== undefined &&
-    !currFrame.env.isLocal(op.name)
+    !r.local
   ) {
     currFrame.values.push(value.contractTarget)
     return minorStep
