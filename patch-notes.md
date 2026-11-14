@@ -31,6 +31,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - Four new procedures: non, which turns a predicate into its opposite; vector-of, which builds a predicate for a vector whose every element passes a test; vector-copy, which copies all or part of a vector; and cons?, which asks whether a value is a non-empty list.
 
+- An error about a guard that is not a boolean, a name that cannot be found, or a name used before it is defined now says where in your program the mistake is, so the editor and the notebook can point at it.
+
 # 4.8.2
 
 - Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.

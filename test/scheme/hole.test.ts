@@ -93,9 +93,11 @@ describe('hole evaluation', () => {
   test('??? is not a hole, so it fails as an unbound name', async () => {
     // The parsing suite above pins the shape; this pins what a student sees,
     // which is what public/reference.html and docs/language.md promise: a third
-    // question mark makes it an ordinary name, with no range and no hole named.
+    // question mark makes it an ordinary name, so the error is the unbound-name
+    // one and names no hole. It is located at the name since #753, as every
+    // unresolved reference now is.
     expect(await runProgram('???')).toEqual([
-      'Runtime error: Variable not found: ???',
+      'Runtime error [1:1-1:3]: Variable not found: ???',
     ])
   })
 

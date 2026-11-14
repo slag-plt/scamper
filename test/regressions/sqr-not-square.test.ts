@@ -26,5 +26,5 @@ test('square is the image shape alone', async () => {
 (sqr 5)
 (square 5)
 `),
-  ).toEqual(['25', 'Runtime error: Variable not found: square'])
+  ).toEqual(['25', 'Runtime error [2:2-2:7]: Variable not found: square'])
 })
