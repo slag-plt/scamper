@@ -1,9 +1,19 @@
 # Dependencies and security alerts
 
-Most Dependabot alerts on this repository are against a tool we run at deploy
-time, not against anything a student or a server ever executes.
+Dependabot alerts on this repository fall into three families, and none of them
+has yet been a vulnerability a student or a server was exposed to.
 This is the standing explanation, so that triage is a lookup rather than an
 investigation each time.
+
++   **The build toolchain** — `vite`, `vitest`, `undici`, and the transitives
+    underneath them. These are ordinary patch bumps and are simply taken; see
+    *Taking a toolchain bump* below.
++   **`better-auth` itself**, the running server's auth. Every advisory against
+    it so far needs a plugin or a database this deployment does not use, and
+    the pin on the 1.6 line means they cannot be upgraded away. Each one is
+    checked against its preconditions and dismissed; see *The `better-auth`
+    advisories*.
++   **The `@better-auth/cli` subtree**, a deploy-time tool. Described below.
 
 ## Check the scope first
 
@@ -17,7 +27,14 @@ gh api repos/slag-plt/scamper/dependabot/alerts --paginate \
 +   `runtime` — a package that reaches a built artefact. These matter; treat one
     as real until shown otherwise.
 +   `development` — a build or deploy-time dependency. On this repository these
-    are almost always the `@better-auth/cli` subtree described below.
+    are either the build toolchain, which is upgraded, or the
+    `@better-auth/cli` subtree described below, which is not.
+
+Scope is a starting point, not the answer. `brace-expansion`, `source-map-js`
+and `zod` have all been reported as `runtime` while reaching nothing a browser
+loads, and the `better-auth` advisories are `runtime` and genuinely about the
+server's auth -- but turn out to need plugins it does not install. Read the
+advisory's own "Am I affected?" conditions before either dismissing or acting.
 
 ## The `@better-auth/cli` subtree
 
@@ -75,8 +92,11 @@ A 1.7 server would therefore run against a schema its own migration tool cannot
 produce, and every account row written under 1.6 would carry no issuer, so
 every existing user would be locked out.
 
-There is no security cost to waiting: every `better-auth` advisory `npm audit`
-reports is fixed at 1.6.22 or below.
+Waiting is not free, and the claim that used to stand here -- that every
+`better-auth` advisory is fixed at 1.6.22 or below -- stopped being true. As of
+November 2026 there are twelve open alerts against the `better-auth` family
+whose first patched version is 1.7.0 or 1.7.7, three of them critical. What
+makes them safe to carry is the configuration, not the version; see below.
 
 Taking 1.7 is its own piece of work, and needs all of:
 
@@ -92,6 +112,63 @@ Note also that the front end imports `better-auth/client`
 `better-auth` too. Keep the two ranges identical — they resolve to one hoisted
 copy, and letting them drift installs two.
 
+## The `better-auth` advisories
+
+Every one so far is about a plugin or a database this deployment does not have.
+`server/src/auth.ts` configures `emailAndPassword` and nothing else: there is
+no `plugins` array and no `socialProviders`, and the database is MariaDB
+through Kysely's `MysqlDialect`. Each advisory's own "Am I affected?" lists
+conditions that must **all** hold, and the first one fails here:
+
+| Advisory | Needs | Why not here |
+| --- | --- | --- |
+| `GHSA-965c-763c-88jm` (critical) — OAuth state usable as a Magic Link | the Magic Link plugin **and** a social or Generic OAuth provider | neither is installed; there is no `plugins` array and no `socialProviders` |
+| `GHSA-r4xp-prcw-77qf` (high) — OAuth Proxy sign-in as another user | the OAuth Proxy plugin, cookie-backed state, implicit linking | the plugin is not installed, and state defaults to `database` with a database configured |
+| `GHSA-q84f-53jg-9ppm` (high) — device approval hides the client | the opt-in `deviceAuthorization()` plugin | not installed; the advisory says outright that this is the whole condition |
+| `GHSA-44jh-23m7-hpcf` (low) — rate limits exceeded under concurrency | database-backed rate limiting on **PostgreSQL** | the database is MariaDB, and rate-limit records default to memory; `@better-auth/drizzle-adapter` is not a dependency at all |
+
+So these are dismissed individually, with the failing precondition as the
+reason, rather than upgraded. **What would change that:** adding any plugin,
+adding a social or Generic OAuth provider, moving to PostgreSQL, or enabling
+database-backed rate limiting. Any of those turns one of the rows above into a
+live vulnerability that the 1.6 pin cannot fix, and taking 1.7 — with the
+`issuer` work above — becomes urgent rather than optional. Re-read this table
+when `server/src/auth.ts` gains an option, not only when an alert arrives.
+
+## Taking a toolchain bump
+
+Dependabot opens a PR per package, and they all edit `package-lock.json`, so
+merging them in sequence means a rebase per PR. One branch that takes them
+together is less work and gives one validated state:
+
+```console
+npm update vite undici zod source-map-js brace-expansion
+npm run validate && npm run build && npm run test:browser
+```
+
+`npm run validate` does not run the browser suite, so a `vitest`,
+`@vitest/browser` or `playwright` bump is unverified without the third command
+(CI's `browser-tests` job is the backstop).
+
+The `vitest` family is a special case: its packages pin each other at an exact
+version, so `npm update vitest` alone cannot move them and fails with
+`ERESOLVE`. They have to go together, and npm will still anchor on the old
+cluster recorded in the lockfile. Delete those entries and let it re-resolve:
+
+```console
+python3 - <<'EOF'
+import json, collections
+lock = json.load(open('package-lock.json'), object_pairs_hook=collections.OrderedDict)
+pkgs = lock['packages']
+for k in [k for k in pkgs if k == 'node_modules/vitest' or '@vitest/' in k]:
+    del pkgs[k]
+json.dump(lock, open('package-lock.json', 'w'), indent=2)
+EOF
+rm -rf node_modules/vitest node_modules/@vitest && npm install
+```
+
+A toolchain bump is invisible to a student, so it adds no patch-notes line.
+
 ## What is worth acting on
 
 +   Any alert whose scope is `runtime`.
@@ -101,6 +178,9 @@ copy, and letting them drift installs two.
 +   Anything reported against a package that no longer has an importer.
     `showdown` was carried for a long time with no `import` anywhere, and simply
     deleting it retired three advisories.
++   Any alert against the build toolchain, which is upgraded rather than
+    reasoned about — see *Taking a toolchain bump*. It is cheaper to take the
+    patch than to argue that a dev-server flaw cannot be reached.
 
 Prefer dismissing an individual alert with a reason over adding a blanket
 `ignore` to `.github/dependabot.yml`.
