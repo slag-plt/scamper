@@ -479,7 +479,22 @@ export function prelude_equalsEps(eps: number): L.Value {
 
 // Booleans (6.3)
 
-export function prelude_not(x: boolean): boolean {
+// N.B., `not` is reached without its `boolean?` contract: `non` applies it by
+// its top-level name, which gets the value *behind* the contract wrapper
+// (#553/#476). Unguarded, `!x` coerced rather than complaining, so a `pred?`
+// answering a non-boolean made `(non pred?)` quietly answer #f -- where
+// `(not 5)` has always reported the mistake. `source` is set explicitly so
+// the blame reads `(not)` rather than this function's own name (#683).
+export function prelude_not(x: L.Value): boolean {
+  if (typeof x !== 'boolean') {
+    throw new L.ScamperError(
+      'Runtime',
+      'not: expected a boolean',
+      undefined,
+      undefined,
+      'not',
+    )
+  }
   return !x
 }
 
@@ -1327,6 +1342,53 @@ export function prelude_vectorAppend(...vecs: L.Value[][]): L.Value[] {
     }
   }
   return arr
+}
+
+export function prelude_vectorCopy(
+  v: L.Value,
+  start?: L.Value,
+  end?: L.Value,
+): L.Value[] {
+  // As vector-ref and its neighbours: the contract says `vector?` and
+  // `integer?`, and a library-internal call skips it (#553), so both are
+  // re-narrowed here. An omitted optional arrives as void, i.e. undefined,
+  // which is what the two defaults answer.
+  if (!L.isArray(v)) {
+    throw new L.ScamperError('Runtime', 'vector-copy: expected a vector')
+  }
+  const from = start === undefined ? 0 : start
+  const to = end === undefined ? v.length : end
+  if (!L.isNumber(from) || !Number.isInteger(from)) {
+    throw new L.ScamperError('Runtime', 'vector-copy: expected an integer')
+  }
+  if (!L.isNumber(to) || !Number.isInteger(to)) {
+    throw new L.ScamperError('Runtime', 'vector-copy: expected an integer')
+  }
+  // Racket requires 0 <= start <= end <= (vector-length v) and calls anything
+  // else an error; `Array.prototype.slice` honours none of it. It clamps an
+  // index past the end, and it answers the empty vector when start > end, so
+  // a miscomputed pair of indices would produce a plausible vector rather
+  // than saying anything -- substring's shape (#645), reported in the words
+  // substring, vector-ref and list-ref share.
+  if (from < 0 || from > v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-copy: start index ${from} out of bounds of vector`,
+    )
+  }
+  if (to < 0 || to > v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-copy: end index ${to} out of bounds of vector`,
+    )
+  }
+  if (from > to) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-copy: start index ${from} is greater than end index ${to}`,
+    )
+  }
+  return v.slice(from, to)
 }
 
 // Bytevectors (6.9)
