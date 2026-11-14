@@ -80,6 +80,14 @@ export type StepResult =
 export const displayStep: DisplayStep = { tag: 'display' }
 export const traceStep: TraceStep = { tag: 'trace' }
 export const stmtValueStep: TraceStep = { tag: 'trace', stmtValue: true }
+/**
+ * A step that is major only because it ended a frame (#737). Tag-identical to
+ * `traceStep`, so everything that reads the tag treats the two alike; a
+ * distinct object so the scheduler's per-op fast path can recognise it and
+ * skip `processStepResult` on a run that is not being traced, which is the
+ * only consumer these steps have.
+ */
+export const frameCompletedStep: TraceStep = { tag: 'trace' }
 export const minorStep: MinorStep = { tag: 'minor' }
 export const yieldStep: YieldStep = { tag: 'yield' }
 export function importFileStep(
@@ -399,9 +407,15 @@ export class Fiber {
   /**
    * Resumes a fiber suspended mid-expression by a blocking primitive (see
    * SuspendSignal / BlockOnStep), delivering `value` as the suspended
-   * primitive-call's result. Mirrors exactly what applyFn's JsFunction branch
-   * (push the result) plus stepFrame's post-op finalize (complete the frame if
-   * it is now finished) would have done had the primitive returned synchronously.
+   * primitive-call's result. Mirrors what applyFn's JsFunction branch (push
+   * the result) plus stepFrame's post-op finalize (complete the frame if it is
+   * now finished) would have done had the primitive returned synchronously.
+   *
+   * The mirror is partial: there is no `StepResult` to hand back here, so the
+   * frame completion is not classified and a trace does not render it the way
+   * stepFrame's does since #737. `(string-length (file->string "f.txt"))`
+   * therefore still skips a step. Tracked separately -- closing it means the
+   * scheduler emitting a reduction after a resume, not a change here.
    */
   resumeWithValue(value: Value): void {
     const frame = this.currentFrame
@@ -473,6 +487,19 @@ export class Fiber {
 
     if (this.currentFrame.isFinished()) {
       this.completeCurrentFrame()
+      // Completing a frame is a call becoming its value in the caller, and
+      // that reduction is only visible once the frame is gone -- so a
+      // frame-ending step is major even when its own op was bookkeeping
+      // (#737). Without this a trace loses the step for any library function
+      // with an optional parameter, since the contract wrapper binds each
+      // optional with a `let` and so ends on a minor `pop-scope`.
+      //
+      // The guard only avoids downgrading a step that is already major; the
+      // op handlers above cannot hand back `display`, `import-file`,
+      // `block-on` or `yield` here, which reach the scheduler by other routes.
+      if (isMajorStep.tag === 'minor') {
+        isMajorStep = frameCompletedStep
+      }
     }
     return isMajorStep
   }

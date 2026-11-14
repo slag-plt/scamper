@@ -31,6 +31,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - Four new procedures: non, which turns a predicate into its opposite; vector-of, which builds a predicate for a vector whose every element passes a test; vector-copy, which copies all or part of a vector; and cons?, which asks whether a value is a non-empty list.
 
+- A trace no longer skips the step where a call becomes its value, which it used to do for procedures that take optional arguments, such as substring and most of the image shapes.
+
 # 4.8.2
 
 - Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.
