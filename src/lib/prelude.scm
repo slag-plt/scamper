@@ -430,6 +430,21 @@
     (lambda (v)
       (all-satisfy? (lambda (g) (g v)) fs))))
 
+;;; (non pred?) -> procedure?
+;;;  pred? : procedure?
+;;;   that takes a value as input and returns a boolean.
+;;; Returns a unary function that returns `#t` if and only if `pred?` is `#f` for its argument. It is an error if `pred?` answers anything but a boolean.
+;;; @category function composition, boolean/logic, predicates, all-of, any-of, not, compose, o
+;; N.B., applying `not` here reaches it *behind* its contract, since a library
+;; definition that names a sibling at top level gets the value the wrapper
+;; wraps (#553/#476). `prelude_not` is guarded for that reason -- see the note
+;; there -- and is listed on the surface that
+;; library-native-bypass-surface.test.ts pins.
+(define-export non
+  (lambda (pred?)
+    (lambda (v)
+      (not (pred? v)))))
+
 ;;; (pair? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a pair.
@@ -440,11 +455,21 @@
 ;;;  p : procedure?
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
-;;; @category list, function composition, association list, andmap, apply, filter, fold, fold-left, fold-right, for-range, map, ormap, reduce, reduce-right
+;;; @category list, function composition, association list, vector-of, andmap, apply, filter, fold, fold-left, fold-right, for-range, map, ormap, reduce, reduce-right
 (define-export list-of
   (lambda (p)
     (lambda (l)
       (and (list? l) (all-satisfy? p l)))))
+
+;;; (vector-of p) -> procedure?
+;;;  p : procedure?
+;;;   returns `#t` if its argument is of the desired type
+;;; Returns a new predicate that tests whether its argument is a vector of elements that satisfy the predicate `p`.
+;;; @category vectors, function composition, predicates, list-of, all-of, any-of, vector-filter, vector-map
+(define-export vector-of
+  (lambda (p)
+    (lambda (v)
+      (and (vector? v) (all-satisfy? p (vector->list v))))))
 
 ;; N.B., deliberately plain Scamper (not js-var-backed): the contract-check
 ;; codegen (contract.ts) needs to call an arbitrary predicate -- possibly a
@@ -530,8 +555,14 @@
 ;;; (nonempty-list? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a non-empty list.
-;;; @category typecheck, predicates
+;;; @category typecheck, predicates, cons?
 (define-export nonempty-list? (js-var "prelude_nonemptyListQ"))
+
+;;; (cons? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a cons cell, _i.e._, a non-empty list. The same test as `nonempty-list?`. A cons cell is not a pair, so use `(any-of pair? cons?)` to ask whether `car` and `cdr` will accept a value.
+;;; @category typecheck, predicates, nonempty-list?, pair?, list?, null?, car, cdr
+(define-export cons? (js-var "prelude_nonemptyListQ"))
 
 ;;; (list & v1) -> list?
 ;;;  v1 : any
@@ -899,6 +930,16 @@
 ;;; Returns a new vector containing the elements of `v1`, ..., `vk` in order.
 ;;; @category vectors, vector-fill!, vector-filter, vector-for-each, vector-map, vector-map!, vector-set!
 (define-export vector-append (js-var "prelude_vectorAppend"))
+
+;;; (vector-copy v [start] [end]) -> vector?
+;;;  v : vector?
+;;;  start : integer?
+;;;   where the copy begins; 0 <= start <= end <= (vector-length v), and defaults to 0
+;;;  end : integer?
+;;;   where the copy ends; defaults to the length of `v`
+;;; Returns a new vector holding the elements of `v` from index `start` (inclusive) to index `end` (exclusive), or to the end of `v` when `end` is left out. The result is a new vector, so `vector-set!` on one does not affect the other; its elements are the same values, so a mutable element -- a vector, a `ref` or a map -- is still shared.
+;;; @category vectors, vector-append, vector-fill!, vector-filter, vector-length, vector-ref, list-take, substring
+(define-export vector-copy (js-var "prelude_vectorCopy"))
 
 ;;; (procedure? v) -> boolean?
 ;;;  v : any

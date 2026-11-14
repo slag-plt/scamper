@@ -1642,6 +1642,51 @@ test('pairQ', async () => {
   ).toEqual(['#t', '#f', '#f', '#t', '#f'])
 })
 
+// cons? (#748), the predicate for "this value is a non-empty list" -- the same
+// test as nonempty-list?, which the prelude has had since #256. The pair cases
+// are the point of the request: a cons cell is not a pair here, so the two
+// predicates partition what car and cdr accept rather than overlapping.
+test('consQ', async () => {
+  expect(
+    await runProgram(`
+(cons? (cons 1 null))
+(cons? (list 1 2 3))
+(cons? null)
+(cons? (pair 1 2))
+(cons? 5)
+(cons? "abc")
+(cons? (vector 1 2))
+(nonempty-list? (cons 1 null))
+(nonempty-list? null)
+`),
+  ).toEqual([
+    // a cons cell, however it was built
+    '#t',
+    '#t',
+    // the empty list is a list, but not a cons cell
+    '#f',
+    // a pair is its own type, following Clojure -- see docs/DIFFERENCES.md
+    '#f',
+    // nothing else is
+    '#f',
+    '#f',
+    '#f',
+    // and it agrees with the synonym it is bound to
+    '#t',
+    '#f',
+  ])
+})
+
+test('consQ-arity', async () => {
+  expect(
+    await runProgram(`
+(cons? (list 1) (list 2))
+`),
+  ).toEqual([
+    'Runtime error: (cons?) Arity mismatch in function call: expected 1 argument, got 2',
+  ])
+})
+
 test('plus-minus', async () => {
   expect(
     await runProgram(`
@@ -2927,6 +2972,70 @@ test('all-of', async () => {
   ])
 })
 
+// non (#740): a predicate's negation as a value. Naming the result is what the
+// request is for -- `(define non-empty? (non null?))` -- so the composition
+// cases matter as much as the direct ones.
+test('non', async () => {
+  expect(
+    await runProgram(`
+((non odd?) 3)
+((non odd?) 4)
+((non null?) (list 1 2))
+((non null?) null)
+((non number?) "hi")
+(define non-empty? (non null?))
+(non-empty? (list 1))
+(non-empty? null)
+(filter (non even?) (list 1 2 3 4 5))
+((non (non odd?)) 3)
+((non (any-of odd? negative?)) 4)
+`),
+  ).toEqual([
+    // the plain negation
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    // naming it, which is what the request is about
+    '#t',
+    '#f',
+    // it is an ordinary predicate, so it composes
+    '(list 1 3 5)',
+    '#t',
+    '#t',
+  ])
+})
+
+test('non-contract', async () => {
+  expect(
+    await runProgram(`
+(non 5)
+`),
+  ).toEqual([
+    'Runtime error: (non) expected a procedure as the first argument, received number',
+  ])
+})
+
+// non applies `not` by its top-level name, which reaches it without its
+// contract (#553/#476). `prelude_not` is guarded for exactly this call -- an
+// unguarded `!x` coerces, so a pred? answering a non-boolean made this answer
+// #f instead of saying so -- and names `not` as the party at fault rather than
+// its own Javascript spelling (#683).
+test('non reports a predicate that does not answer a boolean', async () => {
+  expect(
+    await runProgram(`
+((non (lambda (v) 5)) 1)
+((non (lambda (v) "no")) 1)
+((non (lambda (v) null)) 1)
+`),
+  ).toEqual([
+    'Runtime error: (not) not: expected a boolean',
+    'Runtime error: (not) not: expected a boolean',
+    'Runtime error: (not) not: expected a boolean',
+  ])
+})
+
 test('list-of', async () => {
   expect(
     await runProgram(`
@@ -2960,6 +3069,52 @@ test('list-of-contract', async () => {
 `),
   ).toEqual([
     'Runtime error: (list-of) expected a procedure as the first argument, received number',
+  ])
+})
+
+// vector-of (#747), list-of's counterpart. The list cases are deliberate: the
+// two predicates are disjoint, so neither is true of what the other describes.
+test('vector-of', async () => {
+  expect(
+    await runProgram(`
+((vector-of number?) (vector))
+((vector-of number?) (vector 1 2 3))
+((vector-of number?) (vector 1 "a" 3))
+((vector-of number?) (vector "a"))
+((vector-of number?) 5)
+((vector-of number?) (list 1 2 3))
+((list-of number?) (vector 1 2 3))
+((vector-of string?) (vector "a" "b"))
+((vector-of procedure?) (vector + - map))
+((vector-of (vector-of number?)) (vector (vector 1) (vector 2 3)))
+`),
+  ).toEqual([
+    // the empty vector vacuously satisfies any element predicate
+    '#t',
+    // every element satisfies the predicate
+    '#t',
+    // one element fails
+    '#f',
+    '#f',
+    // a non-vector is never a vector-of anything, a list included
+    '#f',
+    '#f',
+    // and the converse: list-of is not true of a vector
+    '#f',
+    '#t',
+    '#t',
+    // it is an ordinary predicate, so it nests
+    '#t',
+  ])
+})
+
+test('vector-of-contract', async () => {
+  expect(
+    await runProgram(`
+(vector-of 5)
+`),
+  ).toEqual([
+    'Runtime error: (vector-of) expected a procedure as the first argument, received number',
   ])
 })
 
@@ -3938,6 +4093,143 @@ test('vector-filter returns a vector', async () => {
 (vector-filter even? (vector))
 `),
   ).toEqual(['(vector 2 4)', '#t', '(vector)'])
+})
+
+// vector-copy (#749), Racket's, with its optional range: (vector-copy v),
+// (vector-copy v start) and (vector-copy v start end). The bounds are
+// Racket's too -- 0 <= start <= end <= (vector-length v) -- because
+// Array.prototype.slice honours none of them and would answer a plausible
+// vector for a miscomputed pair of indices (substring's shape, #645).
+test('vector-copy', async () => {
+  expect(
+    await runProgram(`
+(vector-copy (vector 1 2 3))
+(vector-copy (vector))
+(vector-copy (vector 1 2 3 4 5) 2)
+(vector-copy (vector 1 2 3 4 5) 0)
+(vector-copy (vector 1 2 3 4 5) 5)
+(vector-copy (vector 1 2 3 4 5) 1 3)
+(vector-copy (vector 1 2 3 4 5) 2 2)
+(vector-copy (vector 1 2 3 4 5) 0 5)
+(vector? (vector-copy (vector 1 2)))
+`),
+  ).toEqual([
+    // the whole vector
+    '(vector 1 2 3)',
+    '(vector)',
+    // from start to the end
+    '(vector 3 4 5)',
+    '(vector 1 2 3 4 5)',
+    // start at the length is the empty vector, not an error
+    '(vector)',
+    // a bounded range, end exclusive
+    '(vector 2 3)',
+    // an empty range
+    '(vector)',
+    '(vector 1 2 3 4 5)',
+    '#t',
+  ])
+})
+
+// The property the procedure exists for: a copy is a separate vector, so
+// vector-set! on either one leaves the other alone. (`equal?` compares
+// structurally and `eqv?` asks the sharper question of identity -- see
+// equal?'s docstring.)
+test('vector-copy copies', async () => {
+  expect(
+    await runProgram(`
+(define v (vector 1 2 3))
+(define w (vector-copy v))
+(vector-set! w 0 99)
+v
+w
+(equal? v (vector-copy v))
+(eqv? v (vector-copy v))
+(eqv? v v)
+(define part (vector-copy v 1 3))
+(vector-fill! part 0)
+v
+part
+`),
+  ).toEqual([
+    'void',
+    // the original is untouched
+    '(vector 1 2 3)',
+    '(vector 99 2 3)',
+    // equal in structure, but not the same vector
+    '#t',
+    '#f',
+    '#t',
+    'void',
+    '(vector 1 2 3)',
+    '(vector 0 0)',
+  ])
+})
+
+// ...and the other half of what the docstring claims: the copy is shallow, so
+// a mutable *element* is still shared. Asserted because the docstring used to
+// promise that mutating one left the other alone, full stop, which slice does
+// not give -- it copies the spine only.
+test('vector-copy is shallow: a mutable element is shared', async () => {
+  expect(
+    await runProgram(`
+(define v (vector (vector 1 2) (ref 0)))
+(define w (vector-copy v))
+(eqv? v w)
+(eqv? (vector-ref v 0) (vector-ref w 0))
+(vector-set! (vector-ref w 0) 0 99)
+(ref-set! (vector-ref w 1) 42)
+v
+(vector-set! w 0 "replaced")
+v
+w
+`),
+  ).toEqual([
+    // the spine is copied, so the two vectors are not the same vector
+    '#f',
+    // but the elements are the same values
+    '#t',
+    'void',
+    'void',
+    // so mutating an element through the copy is visible through the original
+    '(vector (vector 99 2) (ref 42))',
+    'void',
+    // replacing a *slot* of the copy, though, is not
+    '(vector (vector 99 2) (ref 42))',
+    '(vector "replaced" (ref 42))',
+  ])
+})
+
+test('vector-copy-errors', async () => {
+  expect(
+    await runProgram(`
+(vector-copy (vector 1 2 3) 4)
+(vector-copy (vector 1 2 3) 0 4)
+(vector-copy (vector 1 2 3) 2 1)
+(vector-copy (vector 1 2 3) -1)
+(vector-copy (list 1 2 3))
+(vector-copy "abc")
+(vector-copy (vector 1 2 3) "1")
+(vector-copy (vector 1 2 3) 1.5)
+(vector-copy (vector 1 2 3) 0 "2")
+(vector-copy (vector 1 2 3) 0 1 2)
+`),
+  ).toEqual([
+    // the range is checked against the vector, in substring's words
+    'Runtime error: (vector-copy) vector-copy: start index 4 out of bounds of vector',
+    'Runtime error: (vector-copy) vector-copy: end index 4 out of bounds of vector',
+    'Runtime error: (vector-copy) vector-copy: start index 2 is greater than end index 1',
+    'Runtime error: (vector-copy) vector-copy: start index -1 out of bounds of vector',
+    // and the contract checks the types, a string included -- the one a
+    // vector's natives used to accept, since it answers .length too (#553)
+    'Runtime error: (vector-copy) expected a vector as the first argument, received list',
+    'Runtime error: (vector-copy) expected a vector as the first argument, received string',
+    'Runtime error: (vector-copy) expected an integer as the second argument, received string',
+    'Runtime error: (vector-copy) expected an integer as the second argument, received floating point number',
+    'Runtime error: (vector-copy) expected an integer as the third argument, received string',
+    // the optionals raise the ceiling, they do not remove it
+    'Runtime error: (vector-copy) Arity mismatch in function call: expected at most 3 arguments, got 4',
+  ])
 })
 
 // Maps: the operations over what a `{ ... }` literal produces (#103). These are

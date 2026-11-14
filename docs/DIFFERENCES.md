@@ -334,6 +334,7 @@ Runtime error [1:1-1:10]: (error) expected a list as the second argument, receiv
 
 The rejection comes from `cons`'s declared contract, `v2 : list?` (`src/lib/prelude.scm`), which the library generates from the docstring.
 There are no improper lists, and `car`/`cdr` accept either a pair or a non-empty list.
+`pair?` and `cons?` are the predicates for those two, so `(any-of pair? cons?)` is the test for "`car` will accept this" that R7RS spells `pair?` (#748); `cons?` is a synonym of `nonempty-list?`, which is the half of `list?` that is not `null?`.
 **By design.**
 
 **The empty list is `null`, not `'()`** -- necessarily, since there is no quotation.
@@ -400,7 +401,7 @@ The prelude adds two more: `with-file`, which reads a named file and hands its c
 
 Vectors are mutable, and `[...]` is their literal syntax -- `#(` is unavailable because it is taken by the anonymous-function form.
 They are not the only mutable thing a student is handed, though: reference cells (`ref-set!`) and maps (`hash-set!`) are the others, which is why *Equivalence* above has `eqv?` to tell two of them apart.
-`vector-copy` and `vector-copy!` are absent, unremarked; `vector-set!`, `vector-fill!`, `vector-append`, `vector-map`, `vector-for-each`, and the conversions are present.
+`vector-copy!` is absent, unremarked; `vector-copy` (with R7RS's optional `start` and `end`, #749), `vector-set!`, `vector-fill!`, `vector-append`, `vector-map`, `vector-for-each`, and the conversions are present.
 
 ### Exceptions
 
@@ -501,7 +502,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
 | 6.6 Characters | essentially complete | -- |
 | 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`index.ts`); `string-set!` "since it is effectful" (`index.ts`) |
-| 6.8 Vectors | mutable, though not the only mutable type; `[...]` is the literal; no `vector-copy`/`vector-copy!` | unremarked; the bracket literal follows Clojure (`syntax.grammar:5-9`) |
+| 6.8 Vectors | mutable, though not the only mutable type; `[...]` is the literal; no `vector-copy!` | unremarked; the bracket literal follows Clojure (`syntax.grammar:5-9`) |
 | 6.9 Bytevectors | none | design: "inherently effectful" (`index.ts`) |
 | 6.10 Control | `apply`, `map`, `string-map`, `vector-map`, `vector-for-each` present | `for-each`, `string-for-each` **not yet** (`index.ts`); `call/cc`, `values`, `call-with-values`, `dynamic-wind` **not yet** (`index.ts`) |
 | 6.11 Exceptions | none; `with-handler` instead, handler takes a message string | design: "inherently effectful" (`index.ts`) |
