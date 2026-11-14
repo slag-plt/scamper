@@ -123,7 +123,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/scheme/expansion.ts:98-117`': "case 'begin':",
   '`src/scheme/syntax.grammar:170`': 'LineComment',
   // Binding and control
-  '`src/scheme/scope.ts:164-189`': 'letrec: every binder is in scope throughout',
+  '`src/scheme/scope.ts:170-195`': 'letrec: every binder is in scope throughout',
   '`src/scheme/expansion.ts:118-150`': "case 'and':",
   '`src/scheme/expansion.ts:151-189`': "case 'cond':",
   '`src/scheme/syntax.grammar:147-153`': 'Amp { "&" }',
@@ -143,7 +143,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/lpm/limits.ts:23`': 'MAX_CALL_STACK_DEPTH = 200_000',
   // The module system
   '`src/scheme/syntax.grammar:98`': 'kw<"import">',
-  '`src/scheme/scope.ts:481-492`': 'This matches Racket module semantics',
+  '`src/scheme/scope.ts:505-516`': 'This matches Racket module semantics',
   // Summary table
   '`lang.ts:601`': "We follow Clojure's lead",
   '`syntax.grammar:5-9`': 'is a map literal',
