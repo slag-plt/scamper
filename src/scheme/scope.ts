@@ -9,6 +9,12 @@ import {
   parseFunctionDocFromComments,
 } from './docstring/docstring'
 import * as SymbolDB from './symbol-db.js'
+import {
+  ShapeEnv,
+  documentedLambda,
+  shapeEnvFor,
+  shapeOf,
+} from './function-shape.js'
 
 /**
  * Reports a "duplicate variable" diagnostic for each name that appears more
@@ -275,6 +281,7 @@ function scopeCheckFunctionDoc(
   doc: FunctionDoc,
   { name: nameId, value }: A.Define,
   globals: string[],
+  shapes: ShapeEnv,
 ): void {
   const name = nameId.name
   const {
@@ -312,8 +319,11 @@ function scopeCheckFunctionDoc(
     return
   }
 
-  if (!A.isLam(value)) {
-    // can't attach function docs onto non-function definitions
+  // #745: a function is not only a bare lambda. This used to be
+  // `!A.isLam(value)`, which reported `(let (...) (lambda ...))`, `(o f g)`,
+  // `(if c f g)` and `(define inc add1)` as mistakes. Only a value positively
+  // known not to be a function is one; see function-shape.ts.
+  if (shapeOf(value, shapes) === 'not-function') {
     diagnostics.push(
       mkDiagnostic('Docstring', 'warning', 'Function docstring attached to non-function definition. A constant is documented "name: predicate".',
         doc.range,
@@ -322,7 +332,21 @@ function scopeCheckFunctionDoc(
     return
   }
 
-  const paramNames = value.params.map((p) => p.name)
+  // The lambda the docstring's parameters describe, where one can be found
+  // through the forms that merely choose between values. When none can -- the
+  // function came out of `(o f g)`, say -- the parameters cannot be checked
+  // against anything, but the predicates still can, and before #745 the early
+  // return above skipped those too.
+  const lam = documentedLambda(value)
+  if (lam === undefined) {
+    scopeCheckPred(diagnostics, predicate, globals)
+    for (const p of docParamDescriptions) {
+      scopeCheckPred(diagnostics, p.predicate, globals)
+    }
+    return
+  }
+
+  const paramNames = lam.params.map((p) => p.name)
   const docParams = [...args.map((v) => v.name)]
 
   // ... lst val)...
@@ -608,6 +632,7 @@ function scopeCheckStmtBodies(
   globals: string[],
   qualified: QualifiedModules,
   sources: Map<string, ImportSource>,
+  shapes: ShapeEnv,
   s: A.Stmt,
 ): void {
   switch (s.tag) {
@@ -646,7 +671,7 @@ function scopeCheckStmtBodies(
           parseFunctionDocFromComments(s.docComments)
         diagnostics.push(...docDiagnostics)
         if (doc) {
-          scopeCheckFunctionDoc(diagnostics, doc, s, globals)
+          scopeCheckFunctionDoc(diagnostics, doc, s, globals, shapes)
         }
       }
       return
@@ -709,7 +734,11 @@ export async function scopeCheckProgram(
   for (const s of prog) {
     await collectTopLevelBindings(diagnostics, globals, qualified, sources, s)
   }
+  // Built once for the whole program: it reads every library name's value and
+  // classifies each top-level definition, which the per-statement pass below
+  // then only consults (#745).
+  const shapes = shapeEnvFor(prog)
   for (const s of prog) {
-    scopeCheckStmtBodies(diagnostics, globals, qualified, sources, s)
+    scopeCheckStmtBodies(diagnostics, globals, qualified, sources, shapes, s)
   }
 }

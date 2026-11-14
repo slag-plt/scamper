@@ -99,7 +99,7 @@ There are no block comments (`#| ... |#`) and no datum comments (`#;`); `;` to e
 ### Binding and control
 
 **`let` (`reference.html#let`) is `letrec`.**
-This is the single most surprising difference, and it is deliberate: every binder in a `let` is in scope throughout all of the binding values *and* the body (`src/scheme/scope.ts:164-189`).
+This is the single most surprising difference, and it is deliberate: every binder in a `let` is in scope throughout all of the binding values *and* the body (`src/scheme/scope.ts:170-195`).
 A forward reference is not a scope error but a runtime one, raised only if the value is actually needed before it is built:
 
 ~~~
@@ -486,7 +486,7 @@ The top level is one mutually-recursive scope, so definition order does not matt
 0
 ~~~
 
-The source names this: "This matches Racket module semantics -- every module-level definition and import shares one mutually-recursive scope covering the whole body" (`src/scheme/scope.ts:481-492`).
+The source names this: "This matches Racket module semantics -- every module-level definition and import shares one mutually-recursive scope covering the whole body" (`src/scheme/scope.ts:505-516`).
 R7RS's top level is sequential by contrast.
 Name collisions between two user-introduced bindings are reported symmetrically, also following Racket.
 **By design.**
@@ -538,7 +538,7 @@ Racket is the language the TypeScript names most often.
 + **The functional hash interface.**
   `hash-ref`, `hash-set`, `hash-remove`, `hash-keys`, `hash-values`, `hash->list` and the rest follow "Racket's functional hash interface", chosen over SRFI-69/125's mutable `hash-table-*` because those "would not operate on what `{...}` produces" (`src/js/prelude/index.ts`).
 + **Module semantics.**
-  One mutually-recursive top-level scope, and symmetric collision reporting: "This matches Racket module semantics" (`src/scheme/scope.ts:481-492`).
+  One mutually-recursive top-level scope, and symmetric collision reporting: "This matches Racket module semantics" (`src/scheme/scope.ts:505-516`).
 + **Indentation.**
   "Scamper formats code by DrRacket's rules, in the editor and in the output and step panes" (`docs/formatting.md:3`, `src/scheme/style.ts:2`).
 

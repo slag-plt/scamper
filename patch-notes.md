@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Documenting a function that is defined with a let, an if, a composition such as o, or simply another function's name no longer warns that the docstring is attached to something that is not a function, and such a function's parameter names are now checked against its docstring the way a plain lambda's always were.
+
 - Four new procedures: non, which turns a predicate into its opposite; vector-of, which builds a predicate for a vector whose every element passes a test; vector-copy, which copies all or part of a vector; and cons?, which asks whether a value is a non-empty list.
 
 # 4.8.2
