@@ -2,6 +2,7 @@ import { computed, ref, shallowRef, triggerRef, type Ref } from 'vue'
 import Scamper, { type Env, type ReplSession } from '../../../scamper'
 import type { ErrorChannel, OutputChannel, Value } from '../../../lpm'
 import type { ScamperError } from '../../../lpm/error'
+import { snapshot } from '../../../lpm/util'
 
 /**
  * The REPL window's transcript and the session behind it (#399).
@@ -192,7 +193,9 @@ export function useRepl(): Repl {
       }
       entries.value = [...entries.value, entry]
     }
-    entry.values.push(v)
+    // Snapshotted because the transcript draws later, and an entry stays on
+    // screen while later ones run: see OutputChannel.send (#750).
+    entry.values.push(snapshot(v))
     triggerRef(entries)
   }
 
