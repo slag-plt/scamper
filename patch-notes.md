@@ -38,7 +38,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - Color names may now be spelled the British way, so grey, dimgrey and lightgrey work wherever gray, dimgray and lightgray do, and searching the color names for grey finds them.
 
-- An error about a guard that is not a boolean now names the form you actually wrote, so a mistake in an and, or, or cond form is no longer reported as an error in if.
+- When a guard is not a boolean, the error now names the form you actually wrote -- and, or, cond -- instead of blaming if, which you never wrote.
 
 # 4.8.2
 

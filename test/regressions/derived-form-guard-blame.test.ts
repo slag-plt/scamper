@@ -21,12 +21,12 @@ import { runProgram } from '../harness.js'
 /**
  * The expected error for a non-boolean guard, blamed on `form`.
  *
- * DESIGN NOT YET SETTLED (#756). This spells the recommended shape: the
- * message's own head names the form the student wrote, replacing `if:`. The
- * alternative is to leave the message alone and pass the provenance as
- * `ScamperError`'s `source`, which renders as a `(name) ` prefix --
- * `(and) if: expected a boolean guard, received number`. Switching this test
- * to that answer is this one template string.
+ * The message's own head names the form the student wrote, replacing `if:`.
+ * The alternative considered on the issue -- leaving the message alone and
+ * passing the provenance as `ScamperError`'s `source`, rendering
+ * `(and) if: expected a boolean guard, received number` -- was rejected: that
+ * prefix is set from a procedure name elsewhere, so it would read as a
+ * procedure called `and`, and it still leaves the wrong form in the head.
  */
 const guardError = (form: string) =>
   `Runtime error: ${form}: expected a boolean guard, received number`
@@ -75,5 +75,19 @@ describe('a non-boolean guard blames the form it was written in (#756)', () => {
     expect(await runProgram('(if 1 2 3)', { stripRanges: true })).toEqual([
       guardError('if'),
     ])
+  })
+
+  // The library is written in Scamper too, so its own `cond`s reach this raise
+  // whenever a student's predicate returns a non-boolean -- `filter-onto` in
+  // prelude.scm tests `(f (car l))` as a clause guard. The error already points
+  // at the student's call rather than prelude.scm (the builtin arm, #753), and
+  // the blame has to follow: naming `cond` there would send a student looking
+  // for a form they did not write, which is the very bug this fixes.
+  test('a guard inside library code is still blamed on if', async () => {
+    expect(
+      await runProgram('(filter (lambda (x) (modulo x 2)) (list 1 2 3))', {
+        stripRanges: true,
+      }),
+    ).toEqual([guardError('if')])
   })
 })
