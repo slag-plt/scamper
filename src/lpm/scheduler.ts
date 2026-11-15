@@ -1,5 +1,11 @@
 import { ErrorChannel, ICE, OutputChannel, rangesEqual, ReportError, ScamperError, SetRecursionDepthSignal, SuspendSignal, Value } from '.'
-import { blockOnStep, Fiber, minorStep, StepResult } from './fiber'
+import {
+  blockOnStep,
+  Fiber,
+  frameCompletedStep,
+  minorStep,
+  StepResult,
+} from './fiber'
 import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput, mkTraceStart } from './trace/index.js'
@@ -949,8 +955,15 @@ export class Scheduler {
           // boundary and #415's round-robin fairness are untouched. A task
           // being single-stepped is excluded: its gate records the statement
           // index on every step, and interactive stepping has nothing to gain.
+          // A step promoted only for ending a frame (#737) has exactly one
+          // consumer, the tracer, so on a run nobody is tracing it is as inert
+          // as a minor step and takes the same path. It can never be the step
+          // that ends a statement: that needs `stmtValue`, which only
+          // `stmtValueStep` carries.
           if (
-            stepResult === minorStep &&
+            (stepResult === minorStep ||
+              (stepResult === frameCompletedStep &&
+                (!isDisplayTask(task) || !task.isTracing))) &&
             !(isDisplayTask(task) && task.stepping)
           ) {
             this.moveNextTask(task)
