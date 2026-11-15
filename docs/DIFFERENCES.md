@@ -325,7 +325,7 @@ So `cons` does not build a pair:
 
 ~~~
 > (cons 1 2)
-Runtime error [1:1-1:10]: (error) expected a list as the second argument, received number
+Runtime error [1:1-1:10]: (cons) expected a list as the second argument, received number
 > (cons 1 null)
 (list 1)
 > (pair 1 2)
@@ -425,12 +425,16 @@ A runtime error from the library arrives the same way:
 "expected pair or nonempty-list as the first argument, received null"
 ~~~
 
-`error` exists but takes a message only; R7RS's irritants have no equivalent and extra arguments are silently dropped.
+`error` exists but takes a message only, and R7RS's irritants have no equivalent: extra arguments are an arity error rather than being dropped.
 
 ~~~
+> (error "bad")
+Runtime error [1:1-1:13]: (error) bad
 > (error "bad" 1 2)
-Runtime error [1:1-1:17]: (error) bad
+Runtime error [1:1-1:17]: (error) Arity mismatch in function call: expected 1 argument, got 3
 ~~~
+
+The one-argument contract is deliberate, and its docstring gives the reason: the message is all that is shown, "so accepting more would silently drop them" (`src/lib/prelude.scm`).
 
 Two comments in the tree used to describe `with-handler` as a reserved-word special form; #616 removed them.
 It is a library binding, as `src/scheme/raise.ts:230` notes and as the grammar confirms by having no rule for it.
@@ -648,7 +652,7 @@ The names are crossed relative to both standards at once, and both orders are pi
 > (fold-right cons null (list 1 2 3))
 (list 1 2 3)
 > (fold cons null (list 1 2 3))
-Runtime error [3:1-3:29]: (error) expected a list as the second argument, received number
+Runtime error [3:1-3:29]: (cons) expected a list as the second argument, received number
 ~~~
 
 `fold` is the one that fails, because it hands `cons` the accumulator first.
