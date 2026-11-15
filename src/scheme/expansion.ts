@@ -6,7 +6,9 @@ import { ICE, Range } from '../lpm/index.js'
  * own, so the underline lands on the operand or clause at fault rather than
  * the whole form.
  * @param whole the surface form's range, used when a part carries none
- * @param parts the sub-expressions the guard is made of
+ * @param parts the ranges of the sub-expressions *as written*: expanding one
+ *        narrows its own range, so an expanded part would cut the underline
+ *        off part-way through the form the student sees
  */
 function blameRange(whole: Range, ...parts: Range[]): Range {
   return parts.some((r) => r.begin.idx < 0 || r.end.idx < 0)
@@ -138,8 +140,10 @@ export function expandExpr(e: A.Exp): A.Exp {
       //       #f)
       //   ...
       //   #f)
-      // Each operand's `if` carries that operand's range, so a non-boolean
-      // one is underlined on its own rather than across the whole form.
+      // Each operand's `if` carries that operand's range *as written*, so a
+      // non-boolean one is underlined on its own rather than across the whole
+      // form. `e.exps[i]`, not `exps[i]`: expanding an operand narrows its own
+      // range, and the underline wants the operand the student wrote.
       const exps = e.exps.map(expandExpr)
       let ret: A.Exp = A.mkLit(true, e.range, 'and')
       for (let i = exps.length - 1; i >= 0; i--) {
@@ -147,7 +151,7 @@ export function expandExpr(e: A.Exp): A.Exp {
           exps[i],
           ret,
           A.mkLit(false, e.range, 'and'),
-          blameRange(e.range, exps[i].range),
+          blameRange(e.range, e.exps[i].range),
           'and',
         )
       }
@@ -170,7 +174,7 @@ export function expandExpr(e: A.Exp): A.Exp {
           exps[i],
           A.mkLit(true, e.range, 'or'),
           ret,
-          blameRange(e.range, exps[i].range),
+          blameRange(e.range, e.exps[i].range),
           'or',
         )
       }
@@ -197,6 +201,10 @@ export function expandExpr(e: A.Exp): A.Exp {
       const branches = e.branches.map((c) => ({
         test: expandExpr(c.test),
         body: expandExpr(c.body),
+        // Measured on the clause *as written*: expanding a part narrows its
+        // own range, so an expanded one would cut the underline short of the
+        // clause the student sees.
+        blame: blameRange(e.range, c.test.range, c.body.range),
       }))
       const elseBody = e.elseBody
       const hasElse = elseBody !== undefined
@@ -213,7 +221,7 @@ export function expandExpr(e: A.Exp): A.Exp {
           branches[i].test,
           branches[i].body,
           ret,
-          blameRange(e.range, branches[i].test.range, branches[i].body.range),
+          branches[i].blame,
           hasElse && i === branches.length - 1 ? 'cond-else' : 'cond',
         )
       }

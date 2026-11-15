@@ -50,8 +50,11 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
   // which guard failed only in prose. Each clause's `if` now carries that
   // clause's own range instead, so the underline lands on the one clause at
   // fault, matching the choice `LetHandler` makes (`binding.pat.range`, the
-  // failing binder rather than the whole `let`). The whole form's range is
-  // still what the fall-through error and the sugared `cond` use.
+  // failing binder rather than the whole `let`). The fall-through error still
+  // carries the whole form's range. A *sugared* `cond` (sugar.ts) no longer
+  // does -- it rebuilds from the head `if`, so it reports its first clause's
+  // range -- which is harmless because `sugarExpr`'s only caller is the
+  // reduction tracer, and nothing it feeds reads an expression's range.
   test('a cond underlines the clause that failed, not the whole form', async () => {
     expect(
       await runProgram(`(cond
@@ -70,6 +73,23 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
   test('a one-line cond narrows to the clause too', async () => {
     expect(await runProgram('(cond [(= 1 2) 1] [5 2])')).toEqual([
       'Runtime error [1:20-1:22]: cond: expected a boolean guard, received number',
+    ])
+  })
+
+  // The ranges narrowed to are the sub-expressions *as written*, not as
+  // expanded: expanding a derived form narrows its own range, so blaming the
+  // expanded part would stop the underline part-way through the form the
+  // student sees -- here at `(and 1`, mid-operand, rather than at the clause's
+  // closing paren.
+  test('a clause whose body is a derived form is underlined whole', async () => {
+    expect(await runProgram('(cond [9 (and 1 2)] [else 3])')).toEqual([
+      'Runtime error [1:8-1:18]: cond: expected a boolean guard, received number',
+    ])
+  })
+
+  test('an and whose operand is a derived form blames the operand', async () => {
+    expect(await runProgram('(and (cond [#t 5]) #t)')).toEqual([
+      'Runtime error [1:6-1:18]: and: expected a boolean guard, received number',
     ])
   })
 
