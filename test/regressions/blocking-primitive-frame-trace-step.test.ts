@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { localBackend, setBackend } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { reductionTrace } from '../harness.js'
+import * as Scheme from '../../src/scheme'
+import { LoggingChannel } from '../../src/lpm'
+import { Fiber } from '../../src/lpm/fiber'
+import { Scheduler } from '../../src/lpm/scheduler'
+import { makeTraceStepper } from '../../src/scheme/trace'
+import { patchSchedulerYieldForTests, QUANTUM_WAIT_MS, sleep } from '../util'
+
+patchSchedulerYieldForTests()
 
 // https://github.com/slag-plt/scamper/issues/758
 //
@@ -90,6 +98,59 @@ describe('a blocking primitive that completes a frame takes a trace step (#758)'
     expect(
       await reductionTrace('(import file)\n(file->string "data.txt")'),
     ).toEqual(['(file->string "data.txt")', '"hello world\\n"'])
+  })
+
+  // The reduction is emitted from the resume's own callback, long after the
+  // step that suspended the fiber, so the stop the student pressed meanwhile
+  // has to be honoured there -- as the rejection branch beside it already does
+  // (#577). Pinned here rather than in test/regressions/cancel-suspended-task.
+  // test.ts because only a *traced* run can show it: that file's tasks are
+  // untraced, so the emit it guards never happens at all.
+  test('a run stopped while the read is in flight gains no trace line (#577)', async () => {
+    // Hold the read open, so the stop lands while the fiber is suspended on it
+    // -- the student pressing stop during a slow read.
+    let release!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const loadFile = fs.loadFile.bind(fs)
+    fs.loadFile = (filename: string) => held.then(() => loadFile(filename))
+
+    const { prog } = await Scheme.compile(
+      '(import file)\n(string-length (file->string "data.txt"))',
+    )
+    if (prog === undefined) {
+      throw new Error('the program failed to compile')
+    }
+    const ch = new LoggingChannel(true, false)
+    const sched = new Scheduler()
+    const task = {
+      id: 'stopped-mid-read',
+      fiber: new Fiber(prog, Scheme.mkInitialEnv()),
+      out: ch,
+      err: ch,
+      isTracing: true,
+      stepper: makeTraceStepper(),
+    }
+
+    sched.schedule(task)
+    await sleep(QUANTUM_WAIT_MS)
+    // Suspended on the read, with the statement's opening state traced.
+    expect(ch.log).toEqual(['(string-length (file->string "data.txt"))'])
+    const beforeStop = [...ch.log]
+
+    sched.cancelTask(task.id)
+    expect(ch.errLog).toHaveLength(1)
+    expect(ch.errLog[0]).toContain('cancelled')
+
+    // The read cannot be called off, so it lands anyway -- onto a run that is
+    // over. Without the guard its frame completion is traced here.
+    release()
+    await sleep(QUANTUM_WAIT_MS)
+    sched.pauseExecution()
+    await sleep(QUANTUM_WAIT_MS)
+
+    expect(ch.log).toEqual(beforeStop)
   })
 
   test('a blocking call inside a define traces the same way', async () => {
