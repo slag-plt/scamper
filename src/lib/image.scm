@@ -78,17 +78,19 @@
 (define-export color-name? (js-var "color_isColorName"))
 
 ;;; (all-color-names) -> list?
-;;; Returns a list of all valid color names. The names and values are CSS's,
-;;; though only the "gray" spellings are here and not the "grey" ones. CSS's
-;;; dark and light prefixes are not consistent, and the pair you are likely to
-;;; meet is "darkgray", which is lighter than "gray" rather than darker. For a
-;;; gray that is darker than "gray", use "dimgray".
+;;; Returns a list of all valid color names. The names and values are CSS's.
+;;; You may write a gray either way -- "grey" and "gray" are the same color --
+;;; and this list gives the "gray" spellings, which is what Scamper answers
+;;; with. CSS's dark and light prefixes are not consistent, and the pair you
+;;; are likely to meet is "darkgray", which is lighter than "gray" rather than
+;;; darker. For a gray that is darker than "gray", use "dimgray".
 ;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define-export all-color-names (js-var "color_allColorNames"))
 
 ;;; (find-colors color-name) -> list?
 ;;;  color-name : string?
 ;;; Returns a list of all color names that contain `color-name`, case-insensitive.
+;;; Searching for "grey" finds the grays, listed under their "gray" spellings.
 ;;; @category image, color-func, color?, all-color-names, color-name?
 (define-export find-colors (js-var "color_findColors"))
 
