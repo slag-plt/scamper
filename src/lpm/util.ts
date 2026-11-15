@@ -717,16 +717,30 @@ export function objFromArgs(args: L.Value[]): Record<string, L.Value> {
         `A map key must be a string, received ${typeOf(key)}`,
       )
     }
-    ret[key] = args[i + 1]
+    if (key === '__proto__') {
+      // A plain assignment of `__proto__` runs Object.prototype's setter
+      // instead of adding a key, so `{"__proto__" 1}` silently came out as
+      // `{}` -- and, given an object value, as something `hash?` said no to.
+      // Defined as a data property it is an ordinary key like any other.
+      Object.defineProperty(ret, key, {
+        value: args[i + 1],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    } else {
+      ret[key] = args[i + 1]
+    }
   }
   return ret
 }
 
 /**
  * @returns the printed form of a map value: the `{"k1" v1 "k2" v2}` literal a
- * student writes (`{}` when empty), so what Scamper prints is a program
- * Scamper reads back (#751). Shared by every backend so the text and web
- * renderings cannot drift.
+ * student writes (`{}` when empty), so what Scamper prints reads back as the
+ * same map (#751) -- so far as its values do, a closure being the usual value
+ * that does not. Shared by every backend so the text and web renderings
+ * cannot drift.
  */
 export function objToString(
   v: Record<string, L.Value>,

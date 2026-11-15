@@ -27,7 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
-- Maps now print the way you write them, so {"a" 1 "b" 2} comes back as {"a" 1 "b" 2} instead of { "a" : 1, "b" : 2 }, and make-hash builds one without typing braces.
+- Maps now print in the same form you type them in, so {"a" 1 "b" 2} comes back as {"a" 1 "b" 2} rather than { "a" : 1, "b" : 2 }, and make-hash builds one without typing braces.
 
 - Documenting a function that is defined with a let, an if, a composition such as o, or simply another function's name no longer warns that the docstring is attached to something that is not a function, and such a function's parameter names are now checked against its docstring the way a plain lambda's always were.
 

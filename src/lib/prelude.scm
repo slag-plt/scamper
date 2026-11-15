@@ -1379,7 +1379,7 @@
 ;;; (make-hash & k1) -> hash?
 ;;;  k1 : any
 ;;; Returns a new map pairing `k1` with the value after it, `k2` with the value after that, and so on. Every key must be a string. This is the `{k1 v1 ...}` literal written as a call, so `(make-hash)` is the empty map `{}`.
-;;; @category hashmap, hash creation, hash-set, hash-ref, list->hash, hash-keys
+;;; @category hashmap, hash-set, hash-ref, list->hash, hash-keys
 (define-export make-hash (js-var "prelude_makeHash"))
 
 ;;; (hash? v) -> boolean?
@@ -1460,7 +1460,7 @@
 ;;; (list->hash l) -> hash?
 ;;;  l : list?
 ;;; Returns a map built from `l`, a list of key-value pairs whose keys are strings. If a key appears more than once, the last pair wins.
-;;; @category hashmap, hash creation, hash->list, make-hash, hash-set, hash-keys
+;;; @category hashmap, hash->list, make-hash, hash-set, hash-keys
 (define-export list->hash (js-var "prelude_listToHash"))
 
 ;;; null: list?

@@ -72,11 +72,34 @@ describe('#751: a printed map is valid input', () => {
     // A key that needs escaping survives the trip, which is the case a
     // hand-rolled join of the keys would get wrong.
     ['{"a \\"b\\"" 1}', '{"a \\"b\\"" 1}'],
+    ['{"" 1}', '{"" 1}'],
+    // `__proto__` is an ordinary key, not the prototype setter a plain
+    // assignment would have run: before #751 this printed as `{}`.
+    ['{"__proto__" 1}', '{"__proto__" 1}'],
+    ['{"__proto__" {"a" 1}}', '{"__proto__" {"a" 1}}'],
   ])('%s round-trips', async (src, printed) => {
     expect(await runProgram(src)).toEqual([printed])
     // The rendering, fed back in, is the same value again -- not merely
     // something that parses.
     expect(await runProgram(printed)).toEqual([printed])
+  })
+})
+
+// Javascript orders an object's own keys with the array-index-like ones
+// first, ascending, so a map written with numeric keys prints in a different
+// order than it was typed. The *value* still reads back as the same map,
+// which is the property above; the order does not survive, and no claim here
+// or in the patch notes says it does.
+describe('#751: a numeric key is reordered, and still round-trips', () => {
+  test('the printed order is normalised, not the written one', async () => {
+    expect(await runProgram('{"b" 1 "1" 2}')).toEqual(['{"1" 2 "b" 1}'])
+  })
+
+  test('the value is unchanged by the reordering', async () => {
+    expect(await runProgram('(equal? {"b" 1 "1" 2} {"1" 2 "b" 1})')).toEqual([
+      '#t',
+    ])
+    expect(await runProgram('{"1" 2 "b" 1}')).toEqual(['{"1" 2 "b" 1}'])
   })
 })
 
@@ -90,6 +113,18 @@ describe('#751: make-hash builds a map without braces', () => {
       '{"a" 1 "b" 2}',
     ])
     expect(await runProgram('(equal? (make-hash "a" 1) {"a" 1})')).toEqual([
+      '#t',
+    ])
+  })
+
+  test('a __proto__ key is an ordinary key here too', async () => {
+    expect(await runProgram('(make-hash "__proto__" 5)')).toEqual([
+      '{"__proto__" 5}',
+    ])
+    expect(await runProgram('(hash-ref (make-hash "__proto__" 5) "__proto__")')).toEqual([
+      '5',
+    ])
+    expect(await runProgram('(hash? (make-hash "__proto__" {}))')).toEqual([
       '#t',
     ])
   })

@@ -542,6 +542,7 @@ Racket is the language the TypeScript names most often.
 + **The functional hash interface.**
   `hash-ref`, `hash-set`, `hash-remove`, `hash-keys`, `hash-values`, `hash->list` and the rest follow "Racket's functional hash interface", chosen over SRFI-69/125's mutable `hash-table-*` because those "would not operate on what `{...}` produces" (`src/js/prelude/index.ts`).
   `make-hash` is the `{...}` literal written as a call, sharing its implementation, so a map can be built without reaching for braces (#751).
+  The name is *not* Racket's, despite the section: Racket's `make-hash` takes an association list and returns a mutable table, and its alternating-arguments constructor is spelled `hash`.
 + **Module semantics.**
   One mutually-recursive top-level scope, and symmetric collision reporting: "This matches Racket module semantics" (`src/scheme/scope.ts:505-516`).
 + **Indentation.**
