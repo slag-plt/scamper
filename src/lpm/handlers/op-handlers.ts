@@ -445,15 +445,12 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
     // rather than the `if` it expanded into (#756); a parsed `if`, and any
     // guard reached inside library code, read `if`.
     //
-    // `op.range` is the whole surface form, so an `if` the expansion produced
-    // is blamed on the form the student actually wrote rather than on an `if`
-    // they never did. That is exact for `and` and `or`, which are small. It is
-    // coarse for `cond`, whose every clause expands to an `if` carrying the
-    // whole `cond`'s range: the underline covers all of them rather than the
-    // guard that failed. A known limitation, not the intended end state --
-    // `LetHandler` above narrows to the failing binder for exactly this reason,
-    // and doing the same here needs an expansion change. A builtin frame blames
-    // its call site, as `MatchHandler` and `HoleHandler` do.
+    // `op.range` is the sub-expression the guard was written in: a parsed
+    // `if`'s whole form, and for a derived form the operand or clause that
+    // expansion gave this `if` (#762), so a five-clause `cond` underlines the
+    // one clause at fault -- the same narrowing `LetHandler` above makes to
+    // the failing binder. A builtin frame blames its call site instead, as
+    // `MatchHandler` and `HoleHandler` do.
     const fromLibrary = currFrame.origin === 'builtin'
     throw new ScamperError(
       'Runtime',

@@ -42,6 +42,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - When a guard is not a boolean, the error now names the form you actually wrote -- and, or, cond -- instead of blaming if, which you never wrote.
 
+- A cond whose guard is not a boolean now underlines only the clause at fault instead of the whole form, and the same narrowing applies to the operands of and and or.
+
 # 4.8.2
 
 - Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.

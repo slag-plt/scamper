@@ -120,15 +120,15 @@ const ANCHORS: Record<string, string | undefined> = {
   // The shape of a program
   '`src/scheme/syntax.grammar:94-108`': 'Struct { paren<kw<"struct">',
   '`src/scheme/syntax.grammar:44-52`': 'CondElseClause {',
-  '`src/scheme/expansion.ts:98-117`': "case 'begin':",
+  '`src/scheme/expansion.ts:113-132`': "case 'begin':",
   '`src/scheme/syntax.grammar:170`': 'LineComment',
   // Binding and control
   '`src/scheme/scope.ts:170-195`': 'letrec: every binder is in scope throughout',
-  '`src/scheme/expansion.ts:118-150`': "case 'and':",
-  '`src/scheme/expansion.ts:151-189`': "case 'cond':",
+  '`src/scheme/expansion.ts:133-182`': "case 'and':",
+  '`src/scheme/expansion.ts:183-229`': "case 'cond':",
   '`src/scheme/syntax.grammar:147-153`': 'Amp { "&" }',
   // No macros / no quotation
-  '`src/scheme/expansion.ts:265-293`': "case 'struct':",
+  '`src/scheme/expansion.ts:305-334`': "case 'struct':",
   '`src/scheme/syntax.grammar:145`': 'baseIdentifier',
   // Numbers
   '`src/scheme/syntax.grammar:121-126`': 'Number {',
