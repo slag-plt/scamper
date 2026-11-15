@@ -244,8 +244,39 @@ const namedCssColors = new Map<string, Rgb>([
   ['yellowgreen', color_rgb(154, 205, 50)]
 ])
 
+/**
+ * The `grey` spellings, mapped to the `gray` ones they name (#757). CSS has
+ * both and Scamper's table has only the latter, so `"dimgrey"` was not a
+ * colour at all.
+ *
+ * Derived from the table rather than listed: exactly the seven names holding
+ * `gray` have a `grey` twin in CSS, and no name holds `grey`, so this cannot
+ * fall out of step with `namedCssColors`.
+ *
+ * Deliberately *beside* the table and not in it. `color_rgbToColorName` walks
+ * the table in order and answers the first nearest name, so an alias entered
+ * there would be a tie it could pick -- `(color->color-name (rgb 128 128 128))`
+ * would start answering `"grey"`. An alias is a way to write a colour, not
+ * another colour, so it is accepted as input and never handed back.
+ */
+const greySpellings = new Map<string, string>(
+  Array.from(namedCssColors.keys())
+    .filter((name) => name.includes('gray'))
+    .map((name) => [name.replace('gray', 'grey'), name]),
+)
+
+/**
+ * The table's own name for `name`, or undefined if it names no colour.
+ * Lower-cased for the reason `color_isColorName` always has been: #154, where
+ * the guard accepted "RED" and the lookup then missed it.
+ */
+function canonicalColorName(name: string): string | undefined {
+  const lowered = name.toLowerCase()
+  return namedCssColors.has(lowered) ? lowered : greySpellings.get(lowered)
+}
+
 export function color_isColorName(name: string): boolean {
-  return namedCssColors.has(name.toLowerCase())
+  return canonicalColorName(name) !== undefined
 }
 
 export function color_allColorNames(): L.List {
@@ -253,9 +284,25 @@ export function color_allColorNames(): L.List {
 }
 
 export function color_findColors(name: string): L.List {
+  const query = name.toLowerCase()
+  // Searching "grey" finds the greys, which is the search a student who
+  // cannot find one actually tries (#757). It answers the table's own
+  // spelling, so what comes back is the name `color->color-name` will use.
+  //
+  // Only a query that spells out `grey` consults the alias, or the substring
+  // search leaks: `gray` holds no `e`, so an unconditional check made
+  // `(find-colors "e")` -- and worse, `(find-colors "re")`, hunting for the
+  // reds -- answer with the whole grey family.
+  const spelledGrey = query.includes('grey')
   const results = []
   for (const [key, _value] of namedCssColors) {
-    if (key.includes(name.toLowerCase())) {
+    // Walking the table rather than the aliases is what keeps a query like
+    // "slate" -- which matches `slategray` directly *and* through its alias --
+    // from listing each of the three twice.
+    if (
+      key.includes(query) ||
+      (spelledGrey && key.replace('gray', 'grey').includes(query))
+    ) {
       results.push(key)
     }
   }
@@ -285,11 +332,16 @@ export function color_rgbToColorName(rgb: Rgb): string {
   return name
 }
 
-/** The named color closest to `v`; the name itself when `v` is already one. */
+/**
+ * The named color closest to `v`; the name itself when `v` is already one.
+ * A `grey` spelling answers with its `gray` one (#757): an alias is a way to
+ * write a color, not a second name for it, so `(describe-color "dimgrey")`
+ * and `(describe-color (circle 20 "solid" "dimgrey"))` agree -- a shape
+ * stores an `Rgb` and so comes back through `color_rgbToColorName`.
+ */
 export function color_colorToColorName(v: L.Value): string {
-  return typeof v === 'string' && color_isColorName(v)
-    ? v.toLowerCase()
-    : color_rgbToColorName(color_colorToRgb(v))
+  const named = typeof v === 'string' ? canonicalColorName(v) : undefined
+  return named ?? color_rgbToColorName(color_colorToRgb(v))
 }
 
 /** How transparent a color is, as a describe-color prefix; '' when opaque. */
@@ -477,10 +529,13 @@ export function color_hsvToString(hsv: Hsv): string {
 /***** Color conversion *******************************************************/
 
 export function color_colorNameToRgb(name: string): Rgb {
-  // Lower-cased, as `color_isColorName` lower-cases what it checks. It did not
-  // before, so the guard accepted "RED", the lookup then missed it, and the
-  // non-null assertion handed back an undefined typed as an Rgb (#154).
-  const rgb = namedCssColors.get(name.toLowerCase())
+  // Resolved through `canonicalColorName`, which lower-cases and accepts a
+  // `grey` spelling. It must agree with `color_isColorName` exactly: before
+  // #154 the guard lower-cased and the lookup did not, so "RED" passed the
+  // guard, missed the table, and the non-null assertion handed back an
+  // undefined typed as an Rgb.
+  const canonical = canonicalColorName(name)
+  const rgb = canonical === undefined ? undefined : namedCssColors.get(canonical)
   if (rgb === undefined) {
     throw new L.ScamperError('Runtime', `unknown color name ${name}`)
   }

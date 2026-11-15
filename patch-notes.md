@@ -36,6 +36,8 @@ Order does not matter within an entry. See docs/releasing.md.
 - The color documentation now warns that darkgray is lighter than gray, as CSS defines it, and points to dimgray for a gray that really is darker.
 - A trace no longer skips the step where a call becomes its value, which it used to do for procedures that take optional arguments, such as substring and most of the image shapes.
 
+- Color names may now be spelled the British way, so grey, dimgrey and lightgrey work wherever gray, dimgray and lightgray do, and searching the color names for grey finds them.
+
 # 4.8.2
 
 - Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.

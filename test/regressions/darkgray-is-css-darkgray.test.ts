@@ -86,10 +86,16 @@ describe('the CSS gray names keep their CSS values (#738)', () => {
     // The claim itself, not just the names: a rewrite could keep all three
     // words and still lose which way round the two greys go.
     expect(description).toContain('lighter')
-    // Scamper has 141 of CSS's 148 names -- the seven "grey" spellings are
-    // absent -- so the note must not promise more than that, or a student
-    // taking its advice and typing "dimgrey" gets an error from the very
-    // sentence meant to help them.
+    // This assertion originally guarded a gap: the seven "grey" spellings
+    // were missing, so the note had to disclose that or a student taking its
+    // advice and typing "dimgrey" got an error from the sentence meant to
+    // help them. #757 added them, so the note now says the opposite -- either
+    // spelling may be written.
+    //
+    // The assertion is weak on its own: any mention of the word satisfies it,
+    // and it says nothing about which spelling is claimed. What pins the
+    // claim is `grey-colour-spellings.test.ts`, which runs the procedures.
+    // This only keeps the subject from vanishing from the prose entirely.
     expect(description).toContain('grey')
   })
 
