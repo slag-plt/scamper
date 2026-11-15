@@ -182,6 +182,9 @@ export const ARGS = new Map<string, string[]>([
   ...ACCESSOR_ARGS,
 
   // prelude: well-typed arguments that mean something the function can use.
+  // `make-hash` takes alternating keys and values, so its rest argument is a
+  // pair of entries rather than one -- see REST_WIDTH below.
+  ['prelude:make-hash', ['"a"', '1']],
   ['prelude:with-handler', ['(lambda (msg) msg)', '(lambda () 0)']],
   ['prelude:quotient', ['7', '2']],
   ['prelude:remainder', ['7', '2']],
@@ -308,3 +311,17 @@ export const ARGS = new Map<string, string[]>([
   ['test:test-case', ['"adds"', 'equal?', '4', '(lambda () (+ 2 2))']],
   ['test:test-exn', ['"raises"', '(lambda () (error "boom"))']],
 ])
+
+/**
+ * How many trailing entries of an {@link ARGS} tuple make up *one* rest
+ * argument. One unless named here.
+ *
+ * The zero-rest sweep (contracts.test.ts) drops the rest argument to build the
+ * empty call, which assumes a rest parameter collects its arguments one at a
+ * time. `make-hash` collects them in pairs -- a key and the value after it --
+ * so dropping a single entry leaves `(make-hash "a")`, which is neither the
+ * full call nor the empty one, and raises for a reason the sweep is not
+ * asking about. The empty call `(make-hash)` is fine, which is the claim that
+ * tier's test exists to make.
+ */
+export const REST_WIDTH = new Map<string, number>([['prelude:make-hash', 2]])

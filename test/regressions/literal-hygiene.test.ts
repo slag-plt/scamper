@@ -19,7 +19,7 @@ describe('a literal\'s meaning does not depend on user bindings', () => {
 
   test('a map literal still builds a map when `vector`/`list` are shadowed', async () => {
     expect(await runProgram('(define list 5)\n(define vector 6)\n{"a" [1]}')).toEqual([
-      '{ "a" : (vector 1) }',
+      '{"a" (vector 1)}',
     ])
   })
 
@@ -42,12 +42,12 @@ describe('a map value is never mistaken for an AST node', () => {
   // such an object constructible from source, so {"tag" "lit"} printed as
   // `void` (an empty Lit node) instead of as itself.
   test('a map with a "tag" key prints as a map', async () => {
-    expect(await runProgram('{"tag" "lit"}')).toEqual(['{ "tag" : "lit" }'])
+    expect(await runProgram('{"tag" "lit"}')).toEqual(['{"tag" "lit"}'])
     expect(await runProgram('{"tag" "lit" "value" 1}')).toEqual([
-      '{ "tag" : "lit", "value" : 1 }',
+      '{"tag" "lit" "value" 1}',
     ])
-    expect(await runProgram('{"tag" "define"}')).toEqual(['{ "tag" : "define" }'])
-    expect(await runProgram('{"tag" "plit"}')).toEqual(['{ "tag" : "plit" }'])
+    expect(await runProgram('{"tag" "define"}')).toEqual(['{"tag" "define"}'])
+    expect(await runProgram('{"tag" "plit"}')).toEqual(['{"tag" "plit"}'])
   })
 
   test('genuine AST nodes are still recognized', () => {

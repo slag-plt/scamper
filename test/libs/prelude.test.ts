@@ -4288,10 +4288,10 @@ m
 m
 `),
     ).toEqual([
-      '{ "a" : 1, "b" : 2 }',
-      '{ "a" : 1 }',
-      '{ "a" : 99 }',
-      '{ "a" : 1 }',
+      '{"a" 1 "b" 2}',
+      '{"a" 1}',
+      '{"a" 99}',
+      '{"a" 1}',
     ])
   })
 
@@ -4304,7 +4304,7 @@ m
 m
 alias
 `),
-    ).toEqual(['void', '{ "a" : 1, "b" : 2 }', '{ "a" : 1, "b" : 2 }'])
+    ).toEqual(['void', '{"a" 1 "b" 2}', '{"a" 1 "b" 2}'])
   })
 
   test('hash-set! overwrites an existing key and rejects a non-string one', async () => {
@@ -4317,7 +4317,7 @@ m
 `),
     ).toEqual([
       'void',
-      '{ "a" : 99 }',
+      '{"a" 99}',
       'Runtime error: (hash-set!) expected a string as the second argument, received number',
     ])
   })
@@ -4332,9 +4332,9 @@ m
 (hash-remove {} "a")
 `),
     ).toEqual([
-      '{ "b" : 2 }',
-      '{ "a" : 1, "b" : 2 }',
-      '{ "a" : 1, "b" : 2 }',
+      '{"b" 2}',
+      '{"a" 1 "b" 2}',
+      '{"a" 1 "b" 2}',
       '{}',
     ])
   })
@@ -4361,7 +4361,7 @@ m
 `),
     ).toEqual([
       '(list (pair "a" 1) (pair "b" 2))',
-      '{ "x" : 1, "y" : 2 }',
+      '{"x" 1 "y" 2}',
       '#t',
       '{}',
     ])
@@ -4369,7 +4369,7 @@ m
 
   test('a later duplicate key wins in list->hash, as in the literal', async () => {
     expect(await runProgram('(list->hash (list (pair "a" 1) (pair "a" 2)))')).toEqual([
-      '{ "a" : 2 }',
+      '{"a" 2}',
     ])
   })
 

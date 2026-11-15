@@ -31,6 +31,7 @@ import {
   ARGS,
   HELPERS,
   MODULE_SAMPLES,
+  REST_WIDTH,
   SAMPLES,
   SAMPLE_FILE,
   SAMPLE_FILE_CONTENTS,
@@ -385,10 +386,11 @@ describe('a rest parameter admits zero arguments', () => {
       if (args === undefined) {
         continue
       }
-      // The tuple is positional and the rest argument is its last entry, so
-      // dropping that entry is the same call with nothing for the rest
-      // parameter to collect.
-      const a = await attempt(b, args.slice(0, -1))
+      // The tuple is positional and the rest argument is its last entry (or
+      // its last REST_WIDTH entries, for a parameter that collects its
+      // arguments in groups), so dropping those is the same call with nothing
+      // for the rest parameter to collect.
+      const a = await attempt(b, args.slice(0, -(REST_WIDTH.get(key(b)) ?? 1)))
       zeroRestAttempts.set(key(b), a)
       runs.push(a)
     }
@@ -425,6 +427,7 @@ describe('the exception lists are still needed', () => {
     ['KNOWN_BROKEN', KNOWN_BROKEN],
     ['ZERO_REST_BROKEN', ZERO_REST_BROKEN],
     ['ARGS', ARGS],
+    ['REST_WIDTH', REST_WIDTH],
   ] as [string, Map<string, unknown>][])(
     'every %s entry names a contracted binding',
     (_name, m) => {

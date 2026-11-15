@@ -690,18 +690,66 @@ export function eqv(v: L.Value, u: L.Value): boolean {
 }
 
 /**
- * @returns the printed form of a map value, `{ "k1" : v1, "k2" : v2 }` (`{}`
- * when empty), given a renderer for its values. Shared by every backend so the
- * text and web renderings cannot drift.
+ * Builds a map from alternating keys and values -- what a `{k1 v1 ...}`
+ * literal and `make-hash` both do, defined once here so the literal and the
+ * procedure cannot drift (#751), as {@link objToString} is for the printed
+ * form.
+ *
+ * Raises rather than reporting a blame name: a caller reached through an
+ * application already gets `(make-hash) ` from the call site, and naming
+ * itself here would say it twice (#685).
+ *
+ * @param args alternating keys and values; each key must be a string
+ */
+export function objFromArgs(args: L.Value[]): Record<string, L.Value> {
+  if (args.length % 2 !== 0) {
+    throw new ScamperError(
+      'Runtime',
+      `A map requires an even number of arguments (alternating keys and values), received ${args.length.toString()}`,
+    )
+  }
+  const ret: Record<string, L.Value> = {}
+  for (let i = 0; i < args.length; i += 2) {
+    const key = args[i]
+    if (typeof key !== 'string') {
+      throw new ScamperError(
+        'Runtime',
+        `A map key must be a string, received ${typeOf(key)}`,
+      )
+    }
+    if (key === '__proto__') {
+      // A plain assignment of `__proto__` runs Object.prototype's setter
+      // instead of adding a key, so `{"__proto__" 1}` silently came out as
+      // `{}` -- and, given an object value, as something `hash?` said no to.
+      // Defined as a data property it is an ordinary key like any other.
+      Object.defineProperty(ret, key, {
+        value: args[i + 1],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    } else {
+      ret[key] = args[i + 1]
+    }
+  }
+  return ret
+}
+
+/**
+ * @returns the printed form of a map value: the `{"k1" v1 "k2" v2}` literal a
+ * student writes (`{}` when empty), so what Scamper prints reads back as the
+ * same map (#751) -- so far as its values do, a closure being the usual value
+ * that does not. Shared by every backend so the text and web renderings
+ * cannot drift.
  */
 export function objToString(
   v: Record<string, L.Value>,
   render: (v: L.Value) => string,
 ): string {
   const entries = Object.keys(v).map(
-    (k) => `"${escapeStringLiteral(k)}" : ${render(v[k])}`,
+    (k) => `"${escapeStringLiteral(k)}" ${render(v[k])}`,
   )
-  return entries.length === 0 ? '{}' : `{ ${entries.join(', ')} }`
+  return `{${entries.join(' ')}}`
 }
 
 /**

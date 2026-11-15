@@ -835,7 +835,7 @@ describe('Construct semantics (comprehensiveness audit)', () => {
   describe('map literal', () => {
     test('builds an object from alternating keys and values (#334)', async () => {
       expect(await runProgram('{"name" "Alice" "age" 30}')).toEqual([
-        '{ "name" : "Alice", "age" : 30 }',
+        '{"name" "Alice" "age" 30}',
       ])
     })
 
@@ -846,17 +846,17 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     test('evaluates both its keys and its values', async () => {
       expect(
         await runProgram('(let ([k "a"]) {k (+ 1 1)})'),
-      ).toEqual(['{ "a" : 2 }'])
+      ).toEqual(['{"a" 2}'])
     })
 
     test('nests', async () => {
       expect(await runProgram('{"a" {"b" [1 2]}}')).toEqual([
-        '{ "a" : { "b" : (vector 1 2) } }',
+        '{"a" {"b" (vector 1 2)}}',
       ])
     })
 
     test('a later duplicate key wins', async () => {
-      expect(await runProgram('{"a" 1 "a" 2}')).toEqual(['{ "a" : 2 }'])
+      expect(await runProgram('{"a" 1 "a" 2}')).toEqual(['{"a" 2}'])
     })
 
     // No procedure is blamed: a map literal is a form rather than a call the

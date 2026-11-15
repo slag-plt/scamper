@@ -26,7 +26,7 @@ describe('#514: toString where there is no DOM', () => {
   // Reordering the struct branch above the HTMLElement one would rescue only
   // the first of these; everything else still falls past it.
   test('so does every other value that falls past the pair branch', () => {
-    expect(U.toString({ a: 1 })).toBe('{ "a" : 1 }')
+    expect(U.toString({ a: 1 })).toBe('{"a" 1}')
     for (const e of [
       new ScamperError('Runtime', 'boom'),
       new ICE('someFn', 'unreachable'),

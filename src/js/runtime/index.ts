@@ -211,18 +211,8 @@ export function runtime_mkVec (...args: L.Value[]): L.Value[] {
  * @returns the object mapping each key to its value
  */
 export function runtime_mkObj (...args: L.Value[]): object {
-  // The parser rejects an odd element count, so this only fires if something
-  // calls ##mkObj## directly.
-  if (args.length % 2 !== 0) {
-    throw new L.ScamperError('Runtime', `A map requires an even number of arguments (alternating keys and values), received ${args.length.toString()}`)
-  }
-  const ret: Record<string, L.Value> = {}
-  for (let i = 0; i < args.length; i += 2) {
-    const key = args[i]
-    if (typeof key !== 'string') {
-      throw new L.ScamperError('Runtime', `A map key must be a string, received ${L.typeOf(key)}`)
-    }
-    ret[key] = args[i + 1]
-  }
-  return ret
+  // The shared builder, so the literal and the `make-hash` a student calls
+  // cannot come apart (#751). Its checks only fire here if something calls
+  // ##mkObj## directly: the parser already rejects an odd element count.
+  return L.objFromArgs(args)
 }

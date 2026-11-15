@@ -440,8 +440,15 @@ MODULE.NAME</pre>
       <pre class="syntax">{KEY VALUE ...}</pre>
       <p>
         A map literal, read as alternating keys and values; an odd number of
-        elements is an error. Keys and values are both ordinary expressions.
-        Curly braces mean this and nothing else.
+        elements is an error. Every key must be a string. Keys and values are
+        both ordinary expressions. Curly braces mean this and nothing else.
+      </p>
+      <p>
+        A map prints in this same form, so what Scamper shows you is a literal
+        you can type back, so long as its values are ones that print as
+        literals themselves. <code>make-hash</code> is this form written as a
+        call &mdash; <code>(make-hash "name" "Alice")</code> &mdash; and
+        <code>(make-hash)</code> is the empty map.
       </p>
       <pre class="example">(display {"name" "Alice" "age" 30})</pre>
     </section>

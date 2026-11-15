@@ -55,7 +55,7 @@ describe('valuesToExps (value stack -> expressions)', () => {
     ]
     expect(valuesToExps(vals).map(expToString)).toEqual([
       '42', '-3.5', '"hi"', '#t', '#f', 'null', 'void',
-      '#\\a', '(vector 1 2 3)', '(vector)', '{ "a" : 1 }', '{}',
+      '#\\a', '(vector 1 2 3)', '(vector)', '{"a" 1}', '{}',
     ])
   })
 
@@ -109,7 +109,7 @@ describe('raising each LPM instruction', () => {
 
     test('char, vector, map, struct, and list values', () => {
       expect(raiseBlk([LPM.mkLit(LPM.mkChar('a'))])).toBe('#\\a')
-      expect(raiseBlk([LPM.mkLit({ a: 1 })])).toBe('{ "a" : 1 }')
+      expect(raiseBlk([LPM.mkLit({ a: 1 })])).toBe('{"a" 1}')
       expect(raiseBlk([LPM.mkLit([1, 2, 3])])).toBe('(vector 1 2 3)')
       expect(
         raiseBlk([LPM.mkLit(LPM.mkStruct('point', ['x', 'y'], [1, 2]))]),

@@ -1546,6 +1546,22 @@ export function prelude_refSet(r: Ref, v: L.Value): void {
 // opaque, and carry their own hash function and equality predicate, so they
 // would not operate on what `{...}` produces. (R7RS-small has no hash tables at
 // all.) The shape here follows Racket's functional hash interface instead.
+//
+// `make-hash` is the literal written as a call, for a student who would rather
+// not reach for braces (#751). It shares the literal's implementation rather
+// than copying it, so the two cannot answer differently.
+
+/**
+ * Builds a map from alternating keys and values, exactly as `{k1 v1 ...}`
+ * does; `(make-hash)` is the empty map.
+ *
+ * N.B., the errors come from the shared builder and do not name `make-hash`,
+ * unlike `checkKey` below: the call site already prefixes `(make-hash) `, so
+ * naming it here would say it twice (#685).
+ */
+export function prelude_makeHash(...args: L.Value[]): Record<string, L.Value> {
+  return L.objFromArgs(args)
+}
 
 /** Raises unless `k` is a string, mirroring the map literal's own key rule. */
 function checkKey(who: string, k: L.Value): string {
