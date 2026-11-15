@@ -86,7 +86,7 @@ describe('typeOf distinguishes a whole number from a float (#606)', () => {
     // carry no argument position -- but they render their type name through
     // the same `typeOf`, which is what this pins.
     expect(await runProgram('(if 5.5 1 2)')).toEqual([
-      'Runtime error: if: expected a boolean guard, received floating point number',
+      'Runtime error [1:1-1:12]: if: expected a boolean guard, received floating point number',
     ])
     expect(await runProgram('(list->string (list 1.5))')).toEqual([
       'Runtime error [1:1-1:25]: (list->string) list->string: list contains non-character element: floating point number',

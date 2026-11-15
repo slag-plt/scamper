@@ -25,13 +25,28 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   // level, and each imported library, per reference (#730). A single `lookup`
   // already reports all three facts.
   const r = currFrame.env.lookup(op.name)
+  // A name that does not resolve is reported where it was *written*, `op.range`.
+  // The scope check already warns at that same spot before the program runs
+  // (scope.ts's `Undefined variable`, which the IDE squiggles), so this is not
+  // the student's only signal. What only this error can say is which reference
+  // the run actually *reached* -- which of two identical typos -- and it is the
+  // range that files the error under a notebook cell. A builtin frame falls
+  // back to its call site, as `match`, `let` and `if` do: a library naming a
+  // name it cannot see is not something the student can open.
   if (!r.found) {
-    throw new ScamperError('Runtime', `Variable not found: ${op.name}`)
+    throw new ScamperError(
+      'Runtime',
+      `Variable not found: ${op.name}`,
+      currFrame.modName,
+      currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
+    )
   }
   if (r.slot === HOLE) {
     throw new ScamperError(
       'Runtime',
       `Variable "${op.name}" is referenced before it is defined`,
+      currFrame.modName,
+      currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
     )
   }
   const value = r.slot
@@ -331,7 +346,7 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
   if (!currBranch) {
     // A `match` in library source has no site in the student's program, so a
     // builtin frame blames the call the student wrote instead of prelude.scm,
-    // exactly as the call range at :190 does.
+    // exactly as `applyFn`'s `siteRange` does.
     throw new ScamperError(
       'Runtime',
       'Inexhaustive pattern match failure',
@@ -378,7 +393,8 @@ export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
       // binding this is, so the underline can land on the very pattern the
       // message names instead of a form that may span many bindings. A `let`
       // in library source has no site in the student's program, so a builtin
-      // frame blames the call they wrote, exactly as :190 and :265 do.
+      // frame blames the call they wrote, exactly as `applyFn`'s `siteRange`
+      // does.
       throw new ScamperError(
         'Runtime',
         binding.failMsg ?? 'let: value did not match its pattern',
@@ -413,9 +429,20 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
   } else if (guard === false) {
     currFrame.pushBlk(op.elseB)
   } else {
+    // `op.range` is the whole surface form, so an `if` the expansion produced
+    // is blamed on the form the student actually wrote rather than on an `if`
+    // they never did. That is exact for `and` and `or`, which are small. It is
+    // coarse for `cond`, whose every clause expands to an `if` carrying the
+    // whole `cond`'s range: the underline covers all of them rather than the
+    // guard that failed. A known limitation, not the intended end state --
+    // `LetHandler` above narrows to the failing binder for exactly this reason,
+    // and doing the same here needs an expansion change. A builtin frame blames
+    // its call site, as `MatchHandler` and `HoleHandler` do.
     throw new ScamperError(
       'Runtime',
       `if: expected a boolean guard, received ${typeOf(guard)}`,
+      currFrame.modName,
+      currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
     )
   }
   return traceStep

@@ -106,7 +106,7 @@ A forward reference is not a scope error but a runtime one, raised only if the v
 > (let ([f (lambda (n) (if (zero? n) 0 (f (- n 1))))]) (f 5))
 0
 > (let ([x y] [y 1]) x)
-Runtime error: Variable "y" is referenced before it is defined
+Runtime error [1:10-1:10]: Variable "y" is referenced before it is defined
 ~~~
 
 Because the bindings are evaluated in order in one recursive scope, a `let` that shadows an outer name behaves like `let*`, not like R7RS `let`:
@@ -137,7 +137,7 @@ Parser error [1:1-1:5]: Malformed let expression (a list of bindings and a body)
 > (if #t 1)
 Parser error [1:1-1:9]: Malformed if expression (a guard, an if-branch, and an else-branch).
 > (if 1 2 3)
-Runtime error: if: expected a boolean guard, received number
+Runtime error [1:1-1:10]: if: expected a boolean guard, received number
 ~~~
 
 There is no truthiness: only `#f` is false, and only `#t` is true.
@@ -148,9 +148,9 @@ Both expand to nested `if` (`src/scheme/expansion.ts:118-150`), so each operand 
 
 ~~~
 > (and 1 2)
-Runtime error: if: expected a boolean guard, received number
+Runtime error [1:1-1:9]: if: expected a boolean guard, received number
 > (or #f 5)
-Runtime error: if: expected a boolean guard, received number
+Runtime error [1:1-1:9]: if: expected a boolean guard, received number
 ~~~
 
 The R7RS idiom `(or x default)` therefore does not work.
@@ -212,11 +212,11 @@ There is no `quote`, no `'` shorthand, no quasiquotation, and no symbol type.
 
 ~~~
 > (quote (1 2 3))
-Runtime error: Variable not found: quote
+Runtime error [1:2-1:6]: Variable not found: quote
 > '(1 2 3)
 Parser error [1:1-1:1]: Malformed syntax.
 > `(1 ,(+ 1 2))
-Runtime error: Variable not found: `
+Runtime error [1:1-1:1]: Variable not found: `
 ~~~
 
 `'` is not even a character an identifier may contain -- the tokenizer treats it as a delimiter (`src/scheme/syntax.grammar:145`) -- so `'x` is a parse error rather than an unbound name.
