@@ -1,5 +1,6 @@
 import { ScamperError } from '../error'
 import { Value } from '../lang'
+import { snapshot } from '../util'
 import { ErrorChannel, OutputChannel } from './channel'
 
 export interface DisplayCallbacks {
@@ -40,7 +41,8 @@ export class VueDisplay implements OutputChannel, ErrorChannel {
   }
 
   send(v: Value) {
-    this._send(v)
+    // Snapshotted because the pane draws later: see OutputChannel.send (#750).
+    this._send(snapshot(v))
     this._totalSends++
   }
 

@@ -8,6 +8,11 @@ import { ScamperError } from '../error.js'
 export interface OutputChannel {
   /**
    * Sends or "prints" the given value to this output channel.
+   *
+   * A channel that does not render on the way past must snapshot what it is
+   * sent (`snapshot` in lpm/util), or a later side effect rewrites output an
+   * earlier statement had already printed (#750).
+   *
    * @param v the value to print
    */
   send: (v: Value) => void

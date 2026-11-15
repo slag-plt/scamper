@@ -13,6 +13,7 @@
 import type { Value } from '../../lpm'
 import type { ErrorChannel, OutputChannel } from '../../lpm/output/channel'
 import type { ScamperError } from '../../lpm/error'
+import { snapshot } from '../../lpm/util'
 
 /** A cell, as the channel needs to know it. */
 export interface OutputSlot {
@@ -142,7 +143,8 @@ export class NotebookDisplay implements OutputChannel, ErrorChannel {
     // A run whose output outlives the notebook it was started from: the file
     // was closed, or the split moved under it.
     if (bucket === undefined) return
-    bucket.push(v)
+    // Snapshotted because a cell draws later: see OutputChannel.send (#750).
+    bucket.push(snapshot(v))
     this.onChange()
   }
 }

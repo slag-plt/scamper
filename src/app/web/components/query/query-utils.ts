@@ -35,6 +35,11 @@ export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
     if (!(firstErr instanceof ReportError)) {
       return firstErr
     }
+    // Drawn later, like the output pane, but deliberately not snapshotted
+    // (#750): a report ends its fiber the instant it arrives (see
+    // Scheduler.processStepResult), so no statement runs after it to mutate
+    // what it carries. It reaches here through `report`, which the snapshot
+    // contract on OutputChannel.send does not cover.
     return firstErr.value
   })
 }
