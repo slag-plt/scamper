@@ -27,18 +27,20 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
     ])
   })
 
-  // `and` and `or` expand to nested `if` carrying the whole form's range
-  // (expansion.ts, the 'and' and 'or' cases), so this raise site is how a
-  // student meets `(and 1 2)` -- far more often than a literal `(if 5 ...)`.
-  test('an and-form expanded to if reports the and-form', async () => {
+  // `and` and `or` expand to nested `if` (expansion.ts, the 'and' and 'or'
+  // cases), so this raise site is how a student meets `(and 1 2)` -- far more
+  // often than a literal `(if 5 ...)`. Each operand's `if` carries that
+  // operand's range, the same narrowing #762 made to `cond` clauses, so the
+  // underline is the operand that was not a boolean rather than the form.
+  test('an and-form expanded to if reports the failing operand', async () => {
     expect(await runProgram('(and #t 2)')).toEqual([
-      'Runtime error [1:1-1:10]: and: expected a boolean guard, received number',
+      'Runtime error [1:9-1:9]: and: expected a boolean guard, received number',
     ])
   })
 
-  test('an or-form expanded to if reports the or-form', async () => {
+  test('an or-form expanded to if reports the failing operand', async () => {
     expect(await runProgram('(or #f 5)')).toEqual([
-      'Runtime error [1:1-1:9]: or: expected a boolean guard, received number',
+      'Runtime error [1:8-1:8]: or: expected a boolean guard, received number',
     ])
   })
 

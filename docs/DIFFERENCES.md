@@ -56,7 +56,7 @@ Three consequences bite immediately.
 Parser error [1:11-1:36]: Malformed lambda expression (a list of parameters and a body).
 ~~~
 
-`begin` (`reference.html#begin`) is how a sequence is written, and it is sugar for nested `let`, not a primitive: `(begin e1 ... ek)` expands to `(let ([_ e1]) ... ek)` (`src/scheme/expansion.ts:98-117`).
+`begin` (`reference.html#begin`) is how a sequence is written, and it is sugar for nested `let`, not a primitive: `(begin e1 ... ek)` expands to `(let ([_ e1]) ... ek)` (`src/scheme/expansion.ts:111-130`).
 **By design.**
 
 **There are no internal definitions.**
@@ -144,13 +144,13 @@ There is no truthiness: only `#f` is false, and only `#t` is true.
 **By design.**
 
 **`and` and `or` (`reference.html#and`, `reference.html#or`) are boolean-valued, not value-returning.**
-Both expand to nested `if` (`src/scheme/expansion.ts:118-150`), so each operand must be a boolean and the result is a boolean:
+Both expand to nested `if` (`src/scheme/expansion.ts:131-178`), so each operand must be a boolean and the result is a boolean:
 
 ~~~
 > (and 1 2)
-Runtime error [1:1-1:9]: and: expected a boolean guard, received number
+Runtime error [1:6-1:6]: and: expected a boolean guard, received number
 > (or #f 5)
-Runtime error [1:1-1:9]: or: expected a boolean guard, received number
+Runtime error [1:8-1:8]: or: expected a boolean guard, received number
 ~~~
 
 The R7RS idiom `(or x default)` therefore does not work.
@@ -163,7 +163,7 @@ The R7RS idiom `(or x default)` therefore does not work.
 Runtime error [1:1-1:13]: (error) No matching clause in cond
 ~~~
 
-The raise is built into the expansion and uses a runtime primitive rather than the prelude's `error`, so it fires whether or not the user has rebound that name (`src/scheme/expansion.ts:151-189`, issue #336).
+The raise is built into the expansion and uses a runtime primitive rather than the prelude's `error`, so it fires whether or not the user has rebound that name (`src/scheme/expansion.ts:179-221`, issue #336).
 **By design.**
 
 **`else` is a reserved word, not auxiliary syntax.**
@@ -193,7 +193,7 @@ The derived forms Scamper does have -- `and`, `or`, `begin`, `cond`, `struct`, `
 
 This is the deepest difference in the document, because R7RS's own prose defines much of the language by macro-expansion, and a course that teaches `syntax-rules` has nothing to teach it with here.
 
-`define-record-type` is replaced by `struct` (`reference.html#struct`), which expands to a constructor, a predicate, and one accessor per field (`src/scheme/expansion.ts:265-293`):
+`define-record-type` is replaced by `struct` (`reference.html#struct`), which expands to a constructor, a predicate, and one accessor per field (`src/scheme/expansion.ts:297-326`):
 
 ~~~
 > (struct posn (x y))

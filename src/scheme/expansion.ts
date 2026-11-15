@@ -1,5 +1,18 @@
 import * as A from './ast.js'
-import { ICE } from '../lpm/index.js'
+import { ICE, Range } from '../lpm/index.js'
+
+/**
+ * The range to blame a derived form's `if` on: the failing sub-expression's
+ * own, so the underline lands on the operand or clause at fault rather than
+ * the whole form.
+ * @param whole the surface form's range, used when a part carries none
+ * @param parts the sub-expressions the guard is made of
+ */
+function blameRange(whole: Range, ...parts: Range[]): Range {
+  return parts.some((r) => r.begin.idx < 0 || r.end.idx < 0)
+    ? whole
+    : Range.union(...parts)
+}
 
 /**
  * Walks a (core, already-expanded) expression to canonicalize the anonymous
@@ -125,10 +138,18 @@ export function expandExpr(e: A.Exp): A.Exp {
       //       #f)
       //   ...
       //   #f)
+      // Each operand's `if` carries that operand's range, so a non-boolean
+      // one is underlined on its own rather than across the whole form.
       const exps = e.exps.map(expandExpr)
       let ret: A.Exp = A.mkLit(true, e.range, 'and')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], ret, A.mkLit(false, e.range, 'and'), e.range, 'and')
+        ret = A.mkIf(
+          exps[i],
+          ret,
+          A.mkLit(false, e.range, 'and'),
+          blameRange(e.range, exps[i].range),
+          'and',
+        )
       }
       return ret
     }
@@ -141,10 +162,17 @@ export function expandExpr(e: A.Exp): A.Exp {
       //     (if ek
       //       #t
       //       #f))
+      // Each operand's `if` carries that operand's range, as in `and` above.
       const exps = e.exps.map(expandExpr)
       let ret: A.Exp = A.mkLit(false, e.range, 'or')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], A.mkLit(true, e.range, 'or'), ret, e.range, 'or')
+        ret = A.mkIf(
+          exps[i],
+          A.mkLit(true, e.range, 'or'),
+          ret,
+          blameRange(e.range, exps[i].range),
+          'or',
+        )
       }
       return ret
     }
@@ -162,6 +190,10 @@ export function expandExpr(e: A.Exp): A.Exp {
       // cannot fall through at all. The `if` holding it is tagged 'cond-else'
       // rather than 'cond' so sugaring can tell "my else-branch is the else
       // clause's body" from "my else-branch is the rest of the chain".
+      //
+      // Each clause's `if` carries that clause's own range, so a non-boolean
+      // guard underlines the one clause at fault rather than every clause in
+      // the form; the fall-through `##error##` app keeps the whole form's.
       const branches = e.branches.map((c) => ({
         test: expandExpr(c.test),
         body: expandExpr(c.body),
@@ -181,7 +213,7 @@ export function expandExpr(e: A.Exp): A.Exp {
           branches[i].test,
           branches[i].body,
           ret,
-          e.range,
+          blameRange(e.range, branches[i].test.range, branches[i].body.range),
           hasElse && i === branches.length - 1 ? 'cond-else' : 'cond',
         )
       }
