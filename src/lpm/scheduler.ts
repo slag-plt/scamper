@@ -589,7 +589,16 @@ export class Scheduler {
           }
           this.resumeOrComplete(task)
         },
-      )
+      ).catch((e: unknown) => {
+        // Both callbacks run detached, outside the try/catch `execute` wraps
+        // every step in, so a throw from either -- a renderer or the tracer
+        // raising on the emit above, an ICE out of handleError -- would settle
+        // nothing at all: the run's owner waits on `onComplete` forever and
+        // the IDE's Run button never comes back. Catches only what the
+        // callbacks themselves throw; the action's own rejection is the
+        // branch above.
+        this.failTask(task, e)
+      })
       // Handled asynchronously; don't fall through to the display-task branch
       // (which would re-process this suspended fiber as a reduction and re-park,
       // double-removing it from the queue).
@@ -1055,6 +1064,22 @@ export class Scheduler {
     this.suspensions.delete(task.id)
     this.tracesStarted.delete(task.id)
     this.nextCaption.delete(task.id)
+  }
+
+  /**
+   * A fatal error outside the `execute` loop: forget the poisoned task, then
+   * hand the error to its owner exactly as the loop's own catch does. With no
+   * `onFatal` to hand it to, it escapes as an unhandled rejection -- which is
+   * what an uncaught throw in a detached callback does today, so nothing is
+   * hidden that was not hidden before. The loop additionally retires itself
+   * there; there is no loop to retire here.
+   */
+  private failTask(task: SchedulerTask, e: unknown): void {
+    this.dropTask(task)
+    if (task.onFatal === undefined) {
+      throw e
+    }
+    task.onFatal(e)
   }
 
   /**

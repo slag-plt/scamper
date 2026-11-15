@@ -3,7 +3,7 @@ import { localBackend, setBackend } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { reductionTrace } from '../harness.js'
 import * as Scheme from '../../src/scheme'
-import { LoggingChannel } from '../../src/lpm'
+import { ICE, LoggingChannel, Value } from '../../src/lpm'
 import { Fiber } from '../../src/lpm/fiber'
 import { Scheduler } from '../../src/lpm/scheduler'
 import { makeTraceStepper } from '../../src/scheme/trace'
@@ -29,6 +29,21 @@ patchSchedulerYieldForTests()
 // The assertions are whole step sequences, as #737's are: a fix that merely
 // adds a step somewhere must still produce exactly these reductions, and in
 // particular must not add a second copy of a statement's final value.
+
+/** An output channel whose `nth` send throws, standing in for a renderer that
+ * breaks on one particular value. */
+class ThrowingChannel extends LoggingChannel {
+  constructor(private readonly nth: number) {
+    super(true, false)
+  }
+
+  override send(v: Value): void {
+    super.send(v)
+    if (this.totalSends === this.nth) {
+      throw new ICE('ThrowingChannel.send', 'the renderer broke')
+    }
+  }
+}
 
 let fs: MockFileSystem
 
@@ -151,6 +166,51 @@ describe('a blocking primitive that completes a frame takes a trace step (#758)'
     await sleep(QUANTUM_WAIT_MS)
 
     expect(ch.log).toEqual(beforeStop)
+  })
+
+  // The emit above runs in a detached `.then`, outside the try/catch `execute`
+  // wraps every step in, so a renderer that throws there used to settle
+  // nothing: no `onComplete`, no `onFatal`, and an IDE left with its Run
+  // button stuck. The same throw one step later, from inside the loop, has
+  // always reached `onFatal` -- so both positions are checked together, which
+  // is what says the two paths now agree.
+  test.each([
+    ['the resume emits the reduction', 2],
+    ['the loop emits the statement value', 3],
+  ])('a renderer that throws while %s is fatal, not fatal-silent', async (
+    _where,
+    failingSend,
+  ) => {
+    const { prog } = await Scheme.compile(
+      '(import file)\n(string-length (file->string "data.txt"))',
+    )
+    if (prog === undefined) {
+      throw new Error('the program failed to compile')
+    }
+    const ch = new ThrowingChannel(failingSend)
+    const sched = new Scheduler()
+    let completed = false
+    let fatal: unknown
+    sched.schedule({
+      id: `renderer-throws-on-${failingSend.toString()}`,
+      fiber: new Fiber(prog, Scheme.mkInitialEnv()),
+      out: ch,
+      err: ch,
+      isTracing: true,
+      stepper: makeTraceStepper(),
+      onComplete: () => {
+        completed = true
+      },
+      onFatal: (e: unknown) => {
+        fatal = e
+      },
+    })
+    await sleep(QUANTUM_WAIT_MS)
+    sched.pauseExecution()
+    await sleep(QUANTUM_WAIT_MS)
+
+    expect(fatal).toBeInstanceOf(ICE)
+    expect(completed).toBe(false)
   })
 
   test('a blocking call inside a define traces the same way', async () => {
