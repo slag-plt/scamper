@@ -1,6 +1,6 @@
 import { arityMismatchMsg, ICE, ScamperError, SetRecursionDepthSignal, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
-import { HOLE, Ops, Scope, Value } from '../lang'
+import { HOLE, Ops, Provenance, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
 import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, mkMatch, patVars, pMatch, popRequired, typeOf, vectorToList } from '../util'
@@ -418,6 +418,18 @@ export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
   return traceStep
 }
 
+/**
+ * The form a non-boolean guard is blamed on.
+ *
+ * `cond-else` reads `cond`: it is an internal tag marking the clause whose
+ * else-branch is an else body, not a form a student writes. Undefined reads
+ * `if`, since an `if` straight from the parser carries no provenance -- and so
+ * does a library frame, whose derived forms the student wrote no more than the
+ * `if` they expand to.
+ */
+const guardBlame = (p: Provenance | undefined, fromLibrary: boolean): string =>
+  p === undefined || fromLibrary ? 'if' : p === 'cond-else' ? 'cond' : p
+
 export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
   // The guard was evaluated inline and is on top of the value stack.
   if (currFrame.values.length === 0) {
@@ -429,6 +441,10 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
   } else if (guard === false) {
     currFrame.pushBlk(op.elseB)
   } else {
+    // The message names the form the student wrote -- `and`, `or` or `cond` --
+    // rather than the `if` it expanded into (#756); a parsed `if`, and any
+    // guard reached inside library code, read `if`.
+    //
     // `op.range` is the whole surface form, so an `if` the expansion produced
     // is blamed on the form the student actually wrote rather than on an `if`
     // they never did. That is exact for `and` and `or`, which are small. It is
@@ -438,11 +454,12 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
     // `LetHandler` above narrows to the failing binder for exactly this reason,
     // and doing the same here needs an expansion change. A builtin frame blames
     // its call site, as `MatchHandler` and `HoleHandler` do.
+    const fromLibrary = currFrame.origin === 'builtin'
     throw new ScamperError(
       'Runtime',
-      `if: expected a boolean guard, received ${typeOf(guard)}`,
+      `${guardBlame(op.provenance, fromLibrary)}: expected a boolean guard, received ${typeOf(guard)}`,
       currFrame.modName,
-      currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
+      fromLibrary ? currFrame.callRange : op.range,
     )
   }
   return traceStep

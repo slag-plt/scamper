@@ -148,9 +148,9 @@ Both expand to nested `if` (`src/scheme/expansion.ts:118-150`), so each operand 
 
 ~~~
 > (and 1 2)
-Runtime error [1:1-1:9]: if: expected a boolean guard, received number
+Runtime error [1:1-1:9]: and: expected a boolean guard, received number
 > (or #f 5)
-Runtime error [1:1-1:9]: if: expected a boolean guard, received number
+Runtime error [1:1-1:9]: or: expected a boolean guard, received number
 ~~~
 
 The R7RS idiom `(or x default)` therefore does not work.
