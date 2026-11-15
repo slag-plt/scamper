@@ -225,9 +225,12 @@ describe('stepwise reduction traces of substantial programs', () => {
 // show `(vector ...)` / `(##mkObj## ...)` unless sugaring recovers the surface
 // form from the provenance tag it carries (see sugar.ts).
 describe('vector and map literals in a reduction trace (#334)', () => {
-  // N.B., the final line of each trace is the *value*, which prints in its own
-  // form ((vector ...) / { "k" : v }) rather than the source form -- only the
-  // reduction steps in between are surface syntax.
+  // N.B., the final line of a trace is the *value*, which prints in its own
+  // form rather than the source form -- only the reduction steps in between
+  // are surface syntax. For a vector those differ, so the trace ends on
+  // `(vector ...)`; for a map they are now the same spelling (#751), and the
+  // stepper's existing dedup (`makeTraceStepper`, trace.ts) drops the repeat
+  // rather than ending on a step that shows no change.
   test('a vector literal reduces as [...], never as (vector ...)', async () => {
     expect(await runProgramTraced('[1 (+ 1 1)]')).toEqual([
       '[1 (+ 1 1)]',
@@ -240,7 +243,13 @@ describe('vector and map literals in a reduction trace (#334)', () => {
     expect(await runProgramTraced('{"a" (+ 1 1)}')).toEqual([
       '{"a" (+ 1 1)}',
       '--> {"a" 2}',
-      '--> { "a" : 2 }',
     ])
+  })
+
+  // The same dedup, with nothing to reduce: a map literal whose entries are
+  // already values is one line, as `(list 1 2)` is. Before #751 it was two,
+  // the second being the same map respelled.
+  test('a map literal of values traces as one line', async () => {
+    expect(await runProgramTraced('{"a" 2}')).toEqual(['{"a" 2}'])
   })
 })

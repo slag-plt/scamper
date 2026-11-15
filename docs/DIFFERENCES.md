@@ -541,6 +541,7 @@ Racket is the language the TypeScript names most often.
   It reaches every character Unicode gives a distinct titlecase form -- 135 code points: the Greek letters with ypogegrammeni (63), Georgian Mkhedruli (46), the Latin digraphs (12), the Latin and Armenian ligatures (13), and `ß`.
 + **The functional hash interface.**
   `hash-ref`, `hash-set`, `hash-remove`, `hash-keys`, `hash-values`, `hash->list` and the rest follow "Racket's functional hash interface", chosen over SRFI-69/125's mutable `hash-table-*` because those "would not operate on what `{...}` produces" (`src/js/prelude/index.ts`).
+  `make-hash` is the `{...}` literal written as a call, sharing its implementation, so a map can be built without reaching for braces (#751).
 + **Module semantics.**
   One mutually-recursive top-level scope, and symmetric collision reporting: "This matches Racket module semantics" (`src/scheme/scope.ts:505-516`).
 + **Indentation.**

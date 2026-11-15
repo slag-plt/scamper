@@ -221,7 +221,7 @@ describe('the runtime library keeps its internal bindings', () => {
 
   test('the forms those primitives back still work', async () => {
     expect(await runProgram('[1 2]')).toEqual(['(vector 1 2)'])
-    expect(await runProgram('{"a" 1}')).toEqual(['{ "a" : 1 }'])
+    expect(await runProgram('{"a" 1}')).toEqual(['{"a" 1}'])
     expect(await runProgram('(struct p (x))\n(p-x (p 1))')).toEqual(['1'])
   })
 })

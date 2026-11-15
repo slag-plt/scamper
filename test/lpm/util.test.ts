@@ -144,7 +144,7 @@ describe('toString', () => {
     ['void', undefined, 'void'],
     ['null', null, 'null'],
     ['empty map', {}, '{}'],
-    ['map', { a: 1, b: 'hi' }, '{ "a" : 1, "b" : "hi" }'],
+    ['map', { a: 1, b: 'hi' }, '{"a" 1 "b" "hi"}'],
     ['empty vector', [], '(vector)'],
     ['vector', [1, 2], '(vector 1 2)'],
     [

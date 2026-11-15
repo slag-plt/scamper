@@ -4,8 +4,8 @@ import { escapeStringLiteral } from '../../../util'
 import CodeElement from './CodeElement.vue'
 import ValueRenderer from '../ValueRenderer.vue'
 
-// A map value (what a `{...}` literal builds), rendered as
-// `{ "k1" : v1, "k2" : v2 }`. Values go through ValueRenderer so a map holding
+// A map value (what a `{...}` literal builds), rendered as the literal itself,
+// `{"k1" v1 "k2" v2}` (#751). Values go through ValueRenderer so a map holding
 // an image, a list, or another map renders those properly.
 const props = defineProps<{ value: Record<string, Value> }>()
 
@@ -19,13 +19,13 @@ const entries = () =>
 <template>
   <CodeElement v-if="Object.keys(value).length === 0">{{ "{}" }}</CodeElement>
   <template v-else>
-    <CodeElement>{{ "{ " }}</CodeElement>
+    <CodeElement>{{ "{" }}</CodeElement>
     <template v-for="(entry, index) in entries()" :key="entry.key">
-      <CodeElement v-if="index > 0">{{ ", " }}</CodeElement>
-      <CodeElement>{{ entry.key }}{{ " : " }}</CodeElement>
+      <CodeElement v-if="index > 0">{{ " " }}</CodeElement>
+      <CodeElement>{{ entry.key }}{{ " " }}</CodeElement>
       <ValueRenderer :value="entry.value" />
     </template>
-    <CodeElement>{{ " }" }}</CodeElement>
+    <CodeElement>{{ "}" }}</CodeElement>
   </template>
 </template>
 
