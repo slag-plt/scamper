@@ -1,5 +1,6 @@
 import { Value } from '../lang.js'
 import { ScamperError } from '../error.js'
+import { snapshot } from '../util.js'
 import { ErrorChannel, OutputChannel } from './channel.js'
 
 /**
@@ -99,7 +100,9 @@ export class TraceCollector implements OutputChannel, ErrorChannel {
     }
     this.emitted += 1
     if (this.current !== this.target) return
-    this.steps.push(v)
+    // Snapshotted because the whole trace is collected first and paged through
+    // afterwards: see OutputChannel.send (#750).
+    this.steps.push(snapshot(v))
   }
 
   pushLevel() {

@@ -510,6 +510,115 @@ export function listNth(n: number, l: L.List): L.Value {
   }
 }
 
+/**
+ * Copies `v` as it is right now, so that a later mutation of it cannot change
+ * what a copy taken earlier says.
+ *
+ * For output channels that defer rendering (#750). A channel rendering on the
+ * way past -- the CLI's text channel, the embed's HTML one -- is already a
+ * snapshot; one that keeps the Value and lets a framework draw it later is
+ * holding the live object, so `(vector-set! v 1 1)` rewrote output a statement
+ * before it had already printed.
+ *
+ * Copies the four aggregates a value can be built from -- vectors, lists,
+ * structs (`ref` is the mutable one) and maps (`hash` is a map: `hash?` is
+ * `isObj`) -- and returns everything else by reference. In particular a `Raw`
+ * object is *deliberately* not copied: a canvas or an HTML tag is the element
+ * the page is showing, so drawing on it after displaying it keeps updating the
+ * screen, as it always has. Data freezes; the DOM stays live. (One element in
+ * two places is still one element -- DOMElementRenderer `replaceChildren`s it,
+ * so displaying the same canvas twice *moves* it and only the last place
+ * updates. That predates this and is not what the exemption is about.)
+ *
+ * A struct's *hidden* fields are likewise shared rather than copied, and that
+ * too is deliberate: `##run##` on a `ReactiveFileChooser` is a live
+ * `RunHandle`, and copying it would hand the renderer a handle onto nothing.
+ * Only the fields a student can see are snapshotted.
+ *
+ * @param seen the copies made so far, so shared structure stays shared and a
+ *        cycle terminates.
+ */
+export function snapshot(
+  v: L.Value,
+  seen: Map<L.Value, L.Value> = new Map<L.Value, L.Value>(),
+): L.Value {
+  // Every atom is immutable, and so is every function: nothing to copy.
+  if (typeof v !== 'object' || v === null) {
+    return v
+  }
+  // Safe as an absence test: only the copies made below are ever stored, and
+  // each of them is an object.
+  const already = seen.get(v)
+  if (already !== undefined) {
+    return already
+  }
+  if (isArray(v)) {
+    const copy: L.Value[] = new Array<L.Value>(v.length)
+    // Registered before the elements are copied, so a vector holding itself
+    // copies to one holding itself rather than recurring forever.
+    seen.set(v, copy)
+    for (let i = 0; i < v.length; i++) {
+      copy[i] = snapshot(v[i], seen)
+    }
+    return copy
+  } else if (isList(v)) {
+    // Walked rather than recurred through. A list is a chain of structs one
+    // cell deep per element, so the struct branch below would cost a frame per
+    // element and overflow the stack on a list the renderers draw without
+    // trouble -- they walk it here too (see valueToString).
+    //
+    // The spine is copied first, with every cell registered, and only then are
+    // the heads filled in. Registering the whole spine up front is what makes
+    // a cycle back into this list cost nothing: an element pointing at the
+    // list finds the copy waiting rather than starting the walk again, which
+    // is quadratic and, deep enough, a stack overflow out of `send`.
+    const cells: L.Cons[] = []
+    let cur: L.List = v
+    let tail: L.List = null
+    while (cur !== null) {
+      // A tail already copied -- a list two values share -- is reused, so the
+      // sharing survives into the snapshot instead of becoming two chains.
+      const done = seen.get(cur)
+      if (done !== undefined) {
+        tail = done as L.List
+        break
+      }
+      cells.push(cur)
+      cur = cur.tail
+    }
+    const copies: L.Cons[] = new Array<L.Cons>(cells.length)
+    for (let i = cells.length - 1; i >= 0; i--) {
+      // Spread for the same reason the struct branch below uses one; `head` is
+      // a placeholder until the second pass.
+      tail = copies[i] = { ...cells[i], tail }
+      seen.set(cells[i], copies[i])
+    }
+    for (let i = 0; i < cells.length; i++) {
+      copies[i].head = snapshot(cells[i].head, seen)
+    }
+    return tail
+  } else if (isStruct(v)) {
+    // Spread rather than mkStruct: it carries over the hidden fields (the tag
+    // and the kind among them) that `getFieldsOfStruct` hides, and sharing
+    // those rather than copying them is the point -- see the docstring.
+    const copy: L.Struct = { ...v }
+    seen.set(v, copy)
+    for (const f of getFieldsOfStruct(v)) {
+      copy[f] = snapshot(v[f], seen)
+    }
+    return copy
+  } else if (isObj(v)) {
+    const copy: Record<string, L.Value> = {}
+    seen.set(v, copy)
+    for (const k of Object.keys(v)) {
+      copy[k] = snapshot(v[k], seen)
+    }
+    return copy
+  } else {
+    return v
+  }
+}
+
 /** @return true if the two L.Values are structurally equal to each other. */
 export function equals(v: L.Value, u: L.Value): boolean {
   // N.B., performing a strict equality check covers atomic L.Values and pointer
