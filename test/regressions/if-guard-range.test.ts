@@ -26,13 +26,13 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
   // student meets `(and 1 2)` -- far more often than a literal `(if 5 ...)`.
   test('an and-form expanded to if reports the and-form', async () => {
     expect(await runProgram('(and #t 2)')).toEqual([
-      'Runtime error [1:1-1:10]: if: expected a boolean guard, received number',
+      'Runtime error [1:1-1:10]: and: expected a boolean guard, received number',
     ])
   })
 
   test('an or-form expanded to if reports the or-form', async () => {
     expect(await runProgram('(or #f 5)')).toEqual([
-      'Runtime error [1:1-1:9]: if: expected a boolean guard, received number',
+      'Runtime error [1:1-1:9]: or: expected a boolean guard, received number',
     ])
   })
 
@@ -53,7 +53,7 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
   [5 3]
   [else 4])`),
     ).toEqual([
-      'Runtime error [1:1-5:11]: if: expected a boolean guard, received number',
+      'Runtime error [1:1-5:11]: cond: expected a boolean guard, received number',
     ])
   })
 

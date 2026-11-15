@@ -38,6 +38,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - Color names may now be spelled the British way, so grey, dimgrey and lightgrey work wherever gray, dimgray and lightgray do, and searching the color names for grey finds them.
 
+- An error about a guard that is not a boolean now names the form you actually wrote, so a mistake in an and, or, or cond form is no longer reported as an error in if.
+
 # 4.8.2
 
 - Programs that work pixel by pixel, such as those using pixel-map, now run noticeably faster.
