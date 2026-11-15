@@ -13,6 +13,12 @@ import { runProgram } from '../harness.js'
 // same answer: the op's own range for an `if` the student wrote, the call site
 // for one in library source, since a range into prelude.scm is worse than
 // none.
+//
+// https://github.com/slag-plt/scamper/issues/762 then narrowed `cond`: a range
+// that was the whole form answered "which `if`" but not "which clause", the
+// question a multi-clause `cond` actually raises. Each clause's expanded `if`
+// carries that clause's range, so the two sibling handlers agree -- `let`
+// blames the binder, `cond` blames the clause.
 
 describe('a non-boolean if guard reports where it is (#753)', () => {
   test('the range covers the if form, not the statement around it', async () => {
@@ -36,16 +42,15 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
     ])
   })
 
-  // KNOWN LIMITATION, pinned so a change to it is deliberate rather than a
-  // surprise. Every clause of a `cond` expands to an `if` carrying the whole
+  // #762. Every clause of a `cond` used to expand to an `if` carrying the whole
   // `cond`'s range (expansion.ts, the 'cond' case), so a multi-clause `cond` --
-  // the shape students actually write -- underlines all of its clauses and says
-  // which guard failed only in prose. This answers #753 between forms but not
-  // within one `cond`, and it is the opposite of the choice `LetHandler` makes
-  // (`binding.pat.range`, the failing binder rather than the whole `let`).
-  // Narrowing it needs an expansion or ops change and is a follow-up, not this
-  // test's expectation changing quietly.
-  test('a cond underlines the whole form, not the clause that failed', async () => {
+  // the shape students actually write -- underlined all of its clauses and said
+  // which guard failed only in prose. Each clause's `if` now carries that
+  // clause's own range instead, so the underline lands on the one clause at
+  // fault, matching the choice `LetHandler` makes (`binding.pat.range`, the
+  // failing binder rather than the whole `let`). The whole form's range is
+  // still what the fall-through error and the sugared `cond` use.
+  test('a cond underlines the clause that failed, not the whole form', async () => {
     expect(
       await runProgram(`(cond
   [(= 1 2) 1]
@@ -53,7 +58,25 @@ describe('a non-boolean if guard reports where it is (#753)', () => {
   [5 3]
   [else 4])`),
     ).toEqual([
-      'Runtime error [1:1-5:11]: cond: expected a boolean guard, received number',
+      'Runtime error [4:4-4:6]: cond: expected a boolean guard, received number',
+    ])
+  })
+
+  // The same narrowing on one line, where the clause and the form differ only
+  // by a few columns: the point is that the range is the clause's, not that it
+  // happens to be on its own line.
+  test('a one-line cond narrows to the clause too', async () => {
+    expect(await runProgram('(cond [(= 1 2) 1] [5 2])')).toEqual([
+      'Runtime error [1:20-1:22]: cond: expected a boolean guard, received number',
+    ])
+  })
+
+  // The fall-through error is raised by the `##error##` application the
+  // expansion appends, which keeps the whole form's range: #762 moves the
+  // guard error only.
+  test('a cond that falls through still reports the whole form', async () => {
+    expect(await runProgram('(cond [#f 1])')).toEqual([
+      'Runtime error [1:1-1:13]: (error) No matching clause in cond',
     ])
   })
 
