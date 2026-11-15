@@ -211,7 +211,9 @@ describe('scamper CLI', { timeout: 30_000 }, () => {
   // #339: --trace used to step the fiber by hand, so it could not service the
   // suspend a blocking primitive raises -- it bailed out with "Blocking
   // operations ... cannot be traced". It is an ordinary traced run now, so
-  // reading a file traces like anything else.
+  // reading a file traces like anything else -- including the step in which
+  // the read itself becomes its value, which this used to pin as missing
+  // (#758).
   test('--trace traces a program that reads a file (#339)', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'scamper-cli-trace-file-'))
     try {
@@ -228,7 +230,12 @@ describe('scamper CLI', { timeout: 30_000 }, () => {
 
       expect(result.stderr).not.toContain('cannot be traced')
       expect(result.stdout).toBe(
-        ['(string-length (file->string "greet.txt"))', '--> 6', ''].join('\n'),
+        [
+          '(string-length (file->string "greet.txt"))',
+          '--> (string-length "hello\\n")',
+          '--> 6',
+          '',
+        ].join('\n'),
       )
       expect(result.status).toBe(0)
     } finally {

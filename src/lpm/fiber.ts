@@ -407,17 +407,15 @@ export class Fiber {
   /**
    * Resumes a fiber suspended mid-expression by a blocking primitive (see
    * SuspendSignal / BlockOnStep), delivering `value` as the suspended
-   * primitive-call's result. Mirrors what applyFn's JsFunction branch (push
-   * the result) plus stepFrame's post-op finalize (complete the frame if it is
-   * now finished) would have done had the primitive returned synchronously.
+   * primitive-call's result. Mirrors exactly what applyFn's JsFunction branch
+   * (push the result) plus stepFrame's post-op finalize (complete the frame if
+   * it is now finished) would have done had the primitive returned synchronously.
    *
-   * The mirror is partial: there is no `StepResult` to hand back here, so the
-   * frame completion is not classified and a trace does not render it the way
-   * stepFrame's does since #737. `(string-length (file->string "f.txt"))`
-   * therefore still skips a step. Tracked separately -- closing it means the
-   * scheduler emitting a reduction after a resume, not a change here.
+   * @returns `frameCompletedStep` if the resume completed a frame -- the call
+   *          becoming its value in the caller, which a trace renders as a
+   *          reduction (#737) -- and `minorStep` otherwise.
    */
-  resumeWithValue(value: Value): void {
+  resumeWithValue(value: Value): StepResult {
     const frame = this.currentFrame
     if (frame === undefined) {
       throw new ICE(
@@ -428,7 +426,9 @@ export class Fiber {
     frame.values.push(value)
     if (frame.isFinished()) {
       this.completeCurrentFrame()
+      return frameCompletedStep
     }
+    return minorStep
   }
 
   /**
