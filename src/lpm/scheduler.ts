@@ -536,7 +536,25 @@ export class Scheduler {
       this.suspendTask(task)
       stepResult.action().then(
         (value) => {
-          fiber.resumeWithValue(value)
+          // A reduction is emitted here, so a cancel has to be honoured here
+          // rather than at resumeOrComplete, exactly as in the rejection
+          // branch below: otherwise a stopped run gains a trailing trace line
+          // (#577).
+          if (this.abandonIfCancelled(task)) {
+            return
+          }
+          // Completing the suspended call's frame is the reduction in which
+          // that call becomes its value, and it happens here rather than in
+          // the per-op loop, so this is where a trace must render it (#758).
+          //
+          // Deliberately not parked afterwards in step mode: the task is
+          // already out of the run queue, so parking would dequeue it twice
+          // and strand the suspension. One click therefore advances the trace
+          // two reductions at a blocking call.
+          const resumeResult = fiber.resumeWithValue(value)
+          if (resumeResult !== minorStep && isDisplayTask(task)) {
+            this.emitReduction(task)
+          }
           // Through resumeOrComplete, not schedule: that is where the
           // suspension is cleared and a cancel that landed mid-action is
           // honoured. Equivalent to scheduling directly, since resumeWithValue
@@ -608,15 +626,9 @@ export class Scheduler {
     } else if (stepResult.tag === 'display') {
       this.captionUpTo(task, fiber.stmtIndex - 1)
       out.send(fiber.lastResult)
-    } else if (!isMinor && task.isTracing && task.stepper) {
+    } else if (!isMinor) {
       // A trace (major) step: render the reduction, if it is user-visible.
-      const v = task.stepper.render(fiber)
-      if (v !== undefined) {
-        // Mid-statement, so the index still points at the statement running.
-        this.captionUpTo(task, fiber.stmtIndex)
-        out.send(this.mkTraceValue(task, v))
-        emittedVisible = true
-      }
+      emittedVisible = this.emitReduction(task)
     }
 
     // Step-mode pause: 'step' pauses after each user-visible reduction;
@@ -648,6 +660,24 @@ export class Scheduler {
     // which is almost every step -- so the task behind this one was never
     // reached at all (#415).
     return false
+  }
+
+  /**
+   * Emits the mid-statement reduction a major step produced, if the run is
+   * being traced and the step is user-visible. Shared by the two places a
+   * reduction can arise -- the per-step path and a blocking primitive's resume
+   * (#758) -- so the two cannot drift.
+   *
+   * @returns whether a reduction was emitted.
+   */
+  private emitReduction(task: DisplayTask): boolean {
+    if (!task.isTracing || !task.stepper) return false
+    const v = task.stepper.render(task.fiber)
+    if (v === undefined) return false
+    // Mid-statement, so the index still points at the statement running.
+    this.captionUpTo(task, task.fiber.stmtIndex)
+    task.out.send(this.mkTraceValue(task, v))
+    return true
   }
 
   /**
