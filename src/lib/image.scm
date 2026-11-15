@@ -78,7 +78,11 @@
 (define-export color-name? (js-var "color_isColorName"))
 
 ;;; (all-color-names) -> list?
-;;; Returns a list of all valid color names.
+;;; Returns a list of all valid color names. The names and values are CSS's,
+;;; though only the "gray" spellings are here and not the "grey" ones. CSS's
+;;; dark and light prefixes are not consistent, and the pair you are likely to
+;;; meet is "darkgray", which is lighter than "gray" rather than darker. For a
+;;; gray that is darker than "gray", use "dimgray".
 ;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define-export all-color-names (js-var "color_allColorNames"))
 
@@ -175,14 +179,16 @@
 
 ;;; (color-name->rgb color-name) -> rgb?
 ;;;  color-name : string?
-;;; Returns the rgb value of the color name.
-;;; @category color, image, rgb, hsv->rgb, rgb->hsv, rgb->string
+;;; Returns the rgb value of the color name. See `all-color-names` for which
+;;; names exist and which are not shaded the way you would guess.
+;;; @category color, image, rgb, hsv->rgb, rgb->hsv, rgb->string, all-color-names
 (define-export color-name->rgb (js-var "color_colorNameToRgb"))
 
 ;;; (color->rgb v) -> rgb?
 ;;;  v : color?
-;;; Returns `v` as an rgb value, whatever form it was given in.
-;;; @category color, image, rgb, color-func, rgb->color-name, describe-color
+;;; Returns `v` as an rgb value, whatever form it was given in. When `v` is a
+;;; color name, see `all-color-names` for which names exist.
+;;; @category color, image, rgb, color-func, rgb->color-name, describe-color, all-color-names
 (define-export color->rgb (js-var "color_colorToRgb"))
 
 ;;; (rgb->color-name rgb) -> string?
