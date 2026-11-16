@@ -29,25 +29,16 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # 4.9.0
 
-> Clearer errors, truer traces, and maps that print the way you type them.
-
-- Maps now print in the same form you type them in, so {"a" 1 "b" 2} comes back as {"a" 1 "b" 2} rather than { "a" : 1, "b" : 2 }, and make-hash builds one without typing braces.
-
-- Documenting a function that is defined with a let, an if, a composition such as o, or simply another function's name no longer warns that the docstring is attached to something that is not a function, and such a function's parameter names are now checked against its docstring the way a plain lambda's always were.
-
-- Four new procedures: non, which turns a predicate into its opposite; vector-of, which builds a predicate for a vector whose every element passes a test; vector-copy, which copies all or part of a vector; and cons?, which asks whether a value is a non-empty list.
-
-- An error about a guard that is not a boolean, a name that cannot be found, or a name used before it is defined now says where in your program the mistake is, so the editor and the notebook can point at it.
-- A vector, hash table, or ref that has already been printed no longer changes on screen when vector-set!, vector-fill!, vector-map!, hash-set!, or ref-set! modifies it later.
+- Map display syntax is now unified with literal syntax, ex. {"a" 1 "b" 2}, and make-hash takes a variable number of arguments, interpreted as key-value pairs.
+- Enhanced checks to determine if a value binding is a function for the purposes of docstring warnings.
+- New predicate and helper procedures: (non pred) negates pred; (vector-of pred) checks whether its input is a vector whose elements satisfy pred ; (vector-copy ...) creates a copy of (a part of) the input vector; (cons? v), which asks whether a value is a non-empty list.
+- Updated reported location of error messages in guards of derived conditional expressions.
+- Fixed a bug where the output of mutating functions (e.g., mutating vector) correctly report pre- and post-update contents.
 - The color documentation now warns that darkgray is lighter than gray, as CSS defines it, and points to dimgray for a gray that really is darker.
 - A trace no longer skips the step where a call becomes its value, which it used to do for procedures that take optional arguments, such as substring and most of the image shapes.
-
 - A trace of a program that reads a file now shows the step where the read becomes the file's contents, instead of jumping straight to the final answer.
-
-- Color names may now be spelled the British way, so grey, dimgrey and lightgrey work wherever gray, dimgray and lightgray do, and searching the color names for grey finds them.
-
+- You may now use British names for colors (e.g., grey, dimgrey and lightgrey work wherever gray, dimgray and lightgray do).
 - When a guard is not a boolean, the error now names the form you actually wrote -- and, or, cond -- instead of blaming if, which you never wrote.
-
 - A cond whose guard is not a boolean now underlines only the clause at fault instead of the whole form, and the same narrowing applies to the operands of and and or.
 
 # 4.8.2
