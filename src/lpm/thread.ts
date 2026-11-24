@@ -9,7 +9,7 @@ import { Range } from "./range"
 import "scheduler-polyfill"
 import '../../public/css/styles.css'
 import * as D from "./draw.js"
-import { string } from "../lib/contract.js"
+//import { string } from "../lib/contract.js"
 
 /** The type of runtime options. */
 export interface Options {
@@ -412,7 +412,7 @@ export class Thread {
 
           let save;
           let param = "";
-          let newObj;
+          //let newObj;
           // conditional to exclude struct constructors, getters, and type check functions
           if(!(result?.toString().includes("L.mkStruct(t, fieldNames, args)")
             || result?.toString().includes("L.isStructKind(v, t)"))) {
@@ -841,6 +841,7 @@ export class Thread {
               HTMLVal = "PROCEDURE"
             } else if (U.isStruct(value)) {
               HTMLVal = D.drawStructHTML(value)
+              console.log("bitches")
               ariaType = 'struct'
               structName = value[0];
             } else {
