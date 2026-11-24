@@ -665,7 +665,7 @@ by GokturkSM
     const div = document.createElement('div');
     div.tabIndex = 0;
     
-  console.log('were here')
+  
     const col = document.createElement('div');
     //col.style.width = '';
       ///col.style.left = `${30}px`
