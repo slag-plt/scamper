@@ -9,7 +9,6 @@ import { Range } from "./range"
 import "scheduler-polyfill"
 import '../../public/css/styles.css'
 import * as D from "./draw.js"
-import { string } from "../lib/contract.js"
 
 /** The type of runtime options. */
 export interface Options {
@@ -411,26 +410,11 @@ export class Thread {
           } // pops trace-block
 
           let save;
-          let param = "";
           // conditional to exclude struct constructors, getters, and type check functions
           if(!(result?.toString().includes("L.mkStruct(t, fieldNames, args)")
             || result?.toString().includes("L.isStructKind(v, t)"))) {
-
-            console.log("[stmt.name, result]", [stmt.name, result], "stmt.expr", stmt.expr)
-            Object.entries(stmt.expr).forEach((obj) => {
-              Object.entries(obj).forEach(([key, value]) => {
-                if(key==="name" && typeof value === "string" && this.nameDefined(value)){
-                  param = value
-                }
-              })
-            })
-            
-            if(param !== "") {
-              this.definedVars.push([stmt.name, result])
-              save = this.draw(param)
-            }
-            
-
+            this.definedVars.push([stmt.name, result])
+            save = this.draw()
           }
           this.advanceStmt() // pops trace
 
@@ -456,16 +440,6 @@ export class Thread {
         return
       }
     }
-  }
-
-  private nameDefined(value: string | L.Ops): boolean {
-    let bool = false
-    Object.entries(this.definedVars).forEach(([ent, ]) => {
-      if (ent === value) {
-        bool = true
-      }
-    })
-    return bool
   }
 
   /**
@@ -730,7 +704,7 @@ export class Thread {
     }
   }
     
-  draw (param: string): HTMLDivElement {
+  draw (): HTMLDivElement {
     //grabs bounded collected suring runtime
       const bounded = this.definedVars
       //console.log(bounded)
@@ -776,12 +750,9 @@ export class Thread {
             let HTMLVal: any = ''
             let ariaType = ""
             let structName = false;
-            console.log("id ", id, "value ", value, "param ", param)
 
             // //typecheck the variable(s) and convert to string or HTML elements
-            if(param !== "") {
-              HTMLVal = param
-            } else if(U.isNull(value)) {
+            if(U.isNull(value)) {
               const div = document.createElement('div')
                 div.className = 'null-box'
                 div.style.marginBottom = '5px'
@@ -917,7 +888,7 @@ export class Thread {
           div = document.createElement('div')
           div.appendChild(stackHTML)
         }
-        //this.out.send(div)
+        this.out.send(div)
 
 /*
         //type check and convert to string or HTML element
