@@ -1,0 +1,1 @@
+export{t as getFS}from"./fs-42.10.0-rc.1.js";
