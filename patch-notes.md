@@ -27,7 +27,9 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
-- New predicates: (member? v lst) asks whether v appears in lst, and (true? v) and (false? v) ask whether v is exactly #t or #f.
+# 4.10.0
+
+- New predicates: (member? v lst) returns #t iff v is in lst; (true? v) and (false? v) return #t iff v is #t and #f, respectively.
 
 # 4.9.0
 
