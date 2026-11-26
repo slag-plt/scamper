@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- New predicates: (member? v lst) asks whether v appears in lst, and (true? v) and (false? v) ask whether v is exactly #t or #f.
+
 # 4.9.0
 
 - Map display syntax is now unified with literal syntax, ex. {"a" 1 "b" 2}, and make-hash takes a variable number of arguments, interpreted as key-value pairs.

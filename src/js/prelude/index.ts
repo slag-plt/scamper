@@ -502,6 +502,17 @@ export function prelude_booleanQ(x: L.Value): boolean {
   return typeof x === 'boolean'
 }
 
+// From Clojure. With no truthiness, these ask whether `x` *is* the boolean,
+// so any non-boolean answers #f from both (#772).
+
+export function prelude_trueQ(x: L.Value): boolean {
+  return x === true
+}
+
+export function prelude_falseQ(x: L.Value): boolean {
+  return x === false
+}
+
 // From racket/base
 
 export function prelude_nand(...xs: boolean[]): boolean {
@@ -768,6 +779,10 @@ export function prelude_indexOf(v: L.Value, l: L.List): number {
     i += 1
   }
   return -1
+}
+
+export function prelude_memberQ(v: L.Value, l: L.List): boolean {
+  return prelude_indexOf(v, l) !== -1
 }
 
 export function prelude_assocKey(v: L.Value, l: L.List): boolean {

@@ -375,14 +375,26 @@
 ;;; (not v) -> boolean?
 ;;;  v : boolean?
 ;;; Returns `#t` if and only `v` is `#f`.
-;;; @category boolean/logic, and, nand, nor, xor, or
+;;; @category boolean/logic, and, nand, nor, xor, or, true?, false?
 (define-export not (js-var "prelude_not"))
 
 ;;; (boolean? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a boolean.
-;;; @category typecheck, boolean/logic, predicates, char?, string?, integer?
+;;; @category typecheck, boolean/logic, predicates, char?, string?, integer?, true?, false?
 (define-export boolean? (js-var "prelude_booleanQ"))
+
+;;; (true? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is `#t`. Equivalent to `(equal? v #t)`.
+;;; @category boolean/logic, predicates, boolean?, false?, not
+(define-export true? (js-var "prelude_trueQ"))
+
+;;; (false? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is `#f`. Equivalent to `(equal? v #f)`; unlike `not`, it accepts any value.
+;;; @category boolean/logic, predicates, boolean?, true?, not
+(define-export false? (js-var "prelude_falseQ"))
 
 ;;; (nand & v1) -> boolean?
 ;;;  v1 : boolean?
@@ -631,15 +643,22 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.
-;;; @category list, list manipulation, association list, range, string-length, tally, tally-value, vector-length, vector-range, vector-ref 
+;;; @category list, list manipulation, association list, member?, range, string-length, tally, tally-value, vector-length, vector-range, vector-ref
 (define-export index-of (js-var "prelude_indexOf"))
+
+;;; (member? v l) -> boolean?
+;;;  v : any
+;;;  l : list?
+;;; Returns `#t` if and only if `v` appears in `l`, compared with `equal?`.
+;;; @category list, predicates, assoc-key?, index-of, tally-value
+(define-export member? (js-var "prelude_memberQ"))
 
 ;;; (assoc-key? k l) -> any
 ;;;  k : any
 ;;;  l : list?
 ;;;   an association list
 ;;; Returns `#t` if `k` is a key in association list `l`.
-;;; @category list, list manipulation, association list, predicates, assoc-ref, assoc-set
+;;; @category list, list manipulation, association list, predicates, assoc-ref, assoc-set, member?
 (define-export assoc-key? (js-var "prelude_assocKey"))
 
 ;;; (assoc-ref k l) -> any
@@ -1188,7 +1207,7 @@
 ;;;  lst : list?
 ;;;  value : any
 ;;; Returns the number of times `value` appears in `lst`, compared with `equal?`.
-;;; @category list, list manipulation, equal?, index-of, length, tally, tally-all
+;;; @category list, list manipulation, equal?, index-of, length, tally, tally-all, member?
 (define-export tally-value
   (lambda (lst value)
     (tally lst (lambda (x) (equal? x value)))))

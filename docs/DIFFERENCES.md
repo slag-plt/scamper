@@ -345,7 +345,8 @@ There are no improper lists, and `car`/`cdr` accept either a pair or a non-empty
 **By design.**
 
 **The `member`/`assoc` family is absent**: `memq`, `memv`, `member`, `assq`, `assv`, and `assoc` are each an unbound variable (`src/js/prelude/index.ts`).
-Scamper replaces them with `index-of`, `assoc-key?`, `assoc-ref`, and `assoc-set` (`src/lib/prelude.scm`), which take the value first, matching R7RS's argument order rather than the data-first order the accessors use (`src/js/prelude/index.ts`, issue #103).
+Scamper replaces them with `member?`, `index-of`, `assoc-key?`, `assoc-ref`, and `assoc-set` (`src/lib/prelude.scm`), which take the value first, matching R7RS's argument order rather than the data-first order the accessors use (`src/js/prelude/index.ts`, issue #103).
+`member?` (#771) answers a boolean where `member` answers the tail from the first match or `#f`, since a list could not be an `if` guard here (see *Binding and control*).
 **By design**, though `assoc-set`'s implementation carries a `// TODO: implement me—this isn't the right implementation!` (`src/js/prelude/index.ts`).
 
 The full `c[ad]+r` family through `cddddr` is present, as ordinary Scheme compositions rather than natives (`src/js/prelude/index.ts`).
@@ -501,8 +502,8 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | --- | --- | --- |
 | 6.1 Equivalence | all three present; `eq?` is a second name for `eqv?` | added in issue #641 once `ref`/`hash-set!` made identity worth asking about. Deviations: `2` is `eqv?` to `2.0`, and `0` to `-0` |
 | 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises; `square` is `sqr`; `string->number` takes a radix, `number->string` does not | design: "the Javascript numeric stack" (`index.ts`); `sqr` frees `square` for the image library (`prelude.scm`). `gcd`/`lcm` **not yet** (`index.ts`) |
-| 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
-| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:601`); "the pure, functional subset" (`index.ts`) |
+| 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor`, `true?`, `false?` |
+| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family, but a boolean `member?` | design: Clojure's split (`lang.ts:601`); "the pure, functional subset" (`index.ts`) |
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
 | 6.6 Characters | essentially complete | -- |
 | 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`index.ts`); `string-set!` "since it is effectful" (`index.ts`) |
@@ -575,8 +576,8 @@ Unattributed in the source but unmistakably Racket's:
 
 ### From Clojure
 
-Clojure's influence is **almost entirely syntactic**; the pair/cons split, the last bullet below, is the one place it reaches the data model.
-There is not one Clojure-derived procedure name in the standard library: `take-while`, `drop-while`, `partition`, `frequencies`, `some`, `every?`, `conj`, `juxt`, `zipmap`, `interleave`, `into`, and `get-in` are all absent.
+Clojure's influence is **almost entirely syntactic**; the pair/cons split is the one place it reaches the data model.
+Only two procedure names in the standard library are attributed to Clojure -- `true?` and `false?` (below); `take-while`, `drop-while`, `partition`, `frequencies`, `some`, `every?`, `conj`, `juxt`, `zipmap`, `interleave`, `into`, and `get-in` are all absent.
 
 What is Clojure, each attributed in the source:
 
@@ -588,6 +589,9 @@ What is Clojure, each attributed in the source:
   Nesting is disallowed, matching Clojure (#605, settling issue #571).
 + **The `&` rest-parameter marker** -- "Clojure-style" (`src/scheme/syntax.grammar:147-153`).
 + **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:601-603`), echoed at `src/js/prelude/index.ts`.
++ **`true?` and `false?`** (#772), which ask whether a value *is* `#t` or `#f` and accept any value, as Clojure's do (`src/js/prelude/index.ts`).
+  Racket's `racket/bool` has `false?` but no `true?`.
+  Without truthiness, `false?` differs from `not` only in accepting a non-boolean: `(false? 0)` is `#f` where `(not 0)` raises.
 
 ### From SRFI-1 and the ML family
 
@@ -615,7 +619,8 @@ Neither R7RS nor, as far as the source records, anyone else's:
 + **`ignore`** (`src/lib/prelude.scm`), which suppresses a value's appearance in the output pane -- a notion with no analogue in a language whose output goes to a port.
 + **`=-eps`** (`src/lib/prelude.scm`), approximate numeric equality, which earns its place given that every number is a double.
 + **`pair`** as a constructor separate from `cons`, forced by the pair/cons split.
-+ **`index-of`, `assoc-key?`, `assoc-ref`, `assoc-set`**, the replacement for the `member`/`assoc` family.
++ **`member?`, `index-of`, `assoc-key?`, `assoc-ref`, `assoc-set`**, the replacement for the `member`/`assoc` family.
+  `member?` (#771) is the name HtDP's teaching languages use, though the source names no parent.
 + **`tally` and `tally-value`** (`src/lib/prelude.scm`) -- the names are Scamper's, though the function is not: counting the elements that satisfy a predicate is `count` in both SRFI-1 and Racket. Their argument order is discussed below.
 + **`list-take`, `list-drop`, `nonempty-list?`, `for-range`, `string->words`, `string-split-vector`, `vector-range`, `function?`** (a second name for `procedure?`, added in #608 because the readings say "function").
 + **`js-var`**, the FFI root, which is exported to user programs (`src/lib/index.ts:41-51`, `:91`), so the whole native surface is reachable from student code -- `(js-var "prelude_car")` evaluates to `car`'s implementation, and `js-var` itself can be shadowed like any other binding.
@@ -705,7 +710,7 @@ Clojure has no predicate-counting procedure at all; the idiom there is `(count (
 So `tally` takes its arguments in an order no language in this comparison uses, and in the opposite order from the `filter` it is built out of.
 The order was chosen deliberately when it was added (#666), and a reversed call is caught by the contract rather than silently answering `0`; this note records the cost, which is that `tally` and `filter` cannot be read off one another.
 
-The value-searching family is a third shape and a consistent one: `index-of`, `assoc-key?`, `assoc-ref` and `assoc-set` all take the value or key first and the list second, matching `member` and `assoc` in both R7RS-small and SRFI-1.
+The value-searching family is a third shape and a consistent one: `member?`, `index-of`, `assoc-key?`, `assoc-ref` and `assoc-set` all take the value or key first and the list second, matching `member` and `assoc` in both R7RS-small and SRFI-1.
 `tally-value lst value` is the exception within that family too, for the same reason as `tally`.
 
 Two smaller notes on this axis.
