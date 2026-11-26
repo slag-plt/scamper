@@ -1196,6 +1196,37 @@ test('index-of takes the value first', async () => {
   ).toEqual(['2', '-1', '-1'])
 })
 
+// member? (#771) is a boolean stand-in for R7RS member, whose tail-or-#f
+// answer could not be an `if` guard here. Value first, like index-of.
+test('member?', async () => {
+  expect(
+    await runProgram(`
+(member? "a" (list "a" "b" "c"))
+(member? "c" (list "a" "b" "c"))
+(member? "d" (list "a" "b" "c"))
+(member? 1 null)
+(member? (list 1 2) (list (list 0) (list 1 2)))
+(member? 1 (list (list 1)))
+(member? #\\a (string->list "abc"))
+(member? 2 (list 2.0))
+(member? 1 5)
+`),
+  ).toEqual([
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    // compared with equal?, so a structurally equal list is found...
+    '#t',
+    // ...but membership does not reach inside nested lists
+    '#f',
+    // chars and numbers compare as equal? does, not by identity
+    '#t',
+    '#t',
+    'Runtime error: (member?) expected a list as the second argument, received number',
+  ])
+})
+
 test('integer', async () => {
   expect(
     await runProgram(`
@@ -1566,6 +1597,24 @@ test('not-boolean', async () => {
     '#f',
     '#f',
   ])
+})
+
+// true? and false? (#772) take any value, as Clojure's do: with no truthiness,
+// only #t itself is true? and only #f itself is false?.
+test('true?-false?', async () => {
+  expect(
+    await runProgram(`
+(true? #t)
+(true? #f)
+(false? #f)
+(false? #t)
+(true? 1)
+(false? 0)
+(true? "#t")
+(false? null)
+(false? "")
+`),
+  ).toEqual(['#t', '#f', '#t', '#f', '#f', '#f', '#f', '#f', '#f'])
 })
 
 test('nullQ-listQ', async () => {
